@@ -62,7 +62,7 @@ int rtsp_servermain(RTSPSERVER *server, char *pexit) {
   }
 
   char const* descriptionString
-    = "Session streamed by \"Msc3xxRtspServer\"";
+    = "Session streamed by \"LiveDeskRtspServer\"";
 
   // Set up each of the possible streams that can be served by the
   // RTSP server.  Each such stream is implemented using a
@@ -71,7 +71,7 @@ int rtsp_servermain(RTSPSERVER *server, char *pexit) {
 
   // A H264/H265 + G711a/AAC video elementary stream:
   {
-    char const* streamName = "video0";
+    char const* streamName = "livedesk";
     ServerMediaSession* sms= ServerMediaSession::createNew(*env, streamName, streamName, descriptionString);
     sms->addSubsession(H26XVideoLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
     switch (server->audio_enctype) {
