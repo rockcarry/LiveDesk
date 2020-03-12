@@ -5,6 +5,17 @@
 #include <pthread.h>
 #include "rtspserver.h"
 
+enum {
+    AIDEV_CMD_STOP = 0,
+    AIDEV_CMD_RESET_BUFFER,
+};
+
+enum {
+    VIENC_CMD_STOP = 0,
+    VIENC_CMD_RESET_BUFFER,
+    VIENC_CMD_REQUEST_IDR,
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

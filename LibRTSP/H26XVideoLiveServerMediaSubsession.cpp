@@ -101,8 +101,8 @@ char const* H26XVideoLiveServerMediaSubsession::getAuxSDPLine(RTPSink* rtpSink, 
 }
 
 FramedSource* H26XVideoLiveServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  mServer->aread(mServer->adev, NULL, 0, 0);
-  mServer->vread(mServer->vdev, NULL, 0, 0);
+  mServer->aread(mServer->adev, NULL, AIDEV_CMD_RESET_BUFFER, 0);
+  mServer->vread(mServer->vdev, NULL, VIENC_CMD_RESET_BUFFER, 0);
 
   // Create the video source:
   H26XLiveFramedSource* source = H26XLiveFramedSource::createNew(envir(), mServer);
@@ -129,15 +129,18 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 			unsigned short& rtpSeqNum, unsigned& rtpTimestamp,
 			ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
             void* serverRequestAlternativeByteHandlerClientData) {
-//printf("%s\n", __func__);
-  ((RTSPSERVER*)mServer)->running_streams++;
+  mServer->running_streams++;
+  mServer->vread(mServer->vdev, NULL, VIENC_CMD_REQUEST_IDR, 0);
   OnDemandServerMediaSubsession::startStream(clientSessionId, streamToken, rtcpRRHandler, rtcpRRHandlerClientData, rtpSeqNum, rtpTimestamp,
     serverRequestAlternativeByteHandler, serverRequestAlternativeByteHandlerClientData);
 }
 
 
 void H26XVideoLiveServerMediaSubsession::deleteStream(unsigned clientSessionId, void*& streamToken) {
-//printf("%s\n", __func__);
-  ((RTSPSERVER*)mServer)->running_streams--;
+  mServer->running_streams--;
+  if (mServer->running_streams == 0) {
+    mServer->aread(mServer->adev, NULL, AIDEV_CMD_STOP, 0);
+    mServer->vread(mServer->vdev, NULL, VIENC_CMD_STOP, 0);
+  }
   OnDemandServerMediaSubsession::deleteStream(clientSessionId, streamToken);
 }

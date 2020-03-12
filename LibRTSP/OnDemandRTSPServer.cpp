@@ -39,7 +39,7 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, char
 }
 
 int rtsp_servermain(RTSPSERVER *server, char *pexit) {
-  OutPacketBuffer::maxSize = 256 * 1024;
+  OutPacketBuffer::maxSize = 512 * 1024;
 
   // Begin by setting up our usage environment:
   TaskScheduler* scheduler = BasicTaskScheduler::createNew();

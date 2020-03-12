@@ -144,7 +144,8 @@ int aidev_read(void *ctxt, void *buf, int size, int wait)
     int    ret   = 0;
     if (!ctxt) return -1;
 
-    if (buf == NULL && size == 0) {
+    if (buf == NULL) {
+        aidev_start(aidev, size);
         pthread_mutex_lock(&aidev->mutex);
         aidev->head = aidev->tail = aidev->size = 0;
         pthread_mutex_unlock(&aidev->mutex);

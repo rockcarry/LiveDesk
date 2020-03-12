@@ -149,10 +149,15 @@ int vienc_read(void *ctxt, void *buf, int size, int wait)
     int    ret   = 0;
     if (!ctxt) return -1;
 
-    if (buf == NULL && size == 0) {
+    if (buf == NULL) {
+        videv_start(enc->videv, size);
+        vienc_start(enc, size);
         pthread_mutex_lock(&enc->mutex);
-        enc->head = enc->tail = enc->size = 0;
-        enc->status |= TS_REQUEST_IDR;
+        switch (size) {
+        case VIENC_CMD_STOP: break;
+        case VIENC_CMD_RESET_BUFFER: enc->head = enc->tail = enc->size = 0; break;
+        case VIENC_CMD_REQUEST_IDR : enc->status |= TS_REQUEST_IDR; break;
+        }
         pthread_mutex_unlock(&enc->mutex);
         return 0;
     }
