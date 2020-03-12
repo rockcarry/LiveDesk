@@ -1,0 +1,7 @@
+!.gitignore
+*.ncb
+*.suo
+Debug/
+Release/
+debug/
+release/
