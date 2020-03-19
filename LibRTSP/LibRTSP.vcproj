@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../pthread-win32/include;../live555/include/BasicUsageEnvironment;../live555/include/groupsock;../live555/include/liveMedia;../live555/include/UsageEnvironment"
+				AdditionalIncludeDirectories="../LiveDesk;../pthread-win32/include;../live555/include/BasicUsageEnvironment;../live555/include/groupsock;../live555/include/liveMedia;../live555/include/UsageEnvironment"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -103,7 +103,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../pthread-win32/include;../live555/include/BasicUsageEnvironment;../live555/include/groupsock;../live555/include/liveMedia;../live555/include/UsageEnvironment"
+				AdditionalIncludeDirectories="../LiveDesk;../pthread-win32/include;../live555/include/BasicUsageEnvironment;../live555/include/groupsock;../live555/include/liveMedia;../live555/include/UsageEnvironment"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"

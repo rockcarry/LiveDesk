@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     live->aidev = aidev_init();
     live->videv = videv_init(VIDEO_FRAME_RATE, VIDEO_WIDTH, VIDEO_HEIGHT);
     live->vienc = vienc_init(live->videv, VIDEO_FRAME_RATE, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BITRATE);
-    live->rtsp  = rtspserver_init(live->aidev, aidev_read, live->vienc, vienc_read, 0, 0, NULL);
+    live->rtsp  = rtspserver_init(live->aidev, aidev_ctrl, live->vienc, vienc_ctrl, 0, 0, NULL);
 
     while (!(live->status & TS_EXIT)) {
         int cmd = _getch();
@@ -44,10 +44,6 @@ int main(int argc, char *argv[])
             break;
         }
     }
-
-    aidev_start(live->aidev, 0);
-    videv_start(live->videv, 0);
-    vienc_start(live->vienc, 0);
 
     rtspserver_exit(live->rtsp);
     vienc_free(live->vienc);

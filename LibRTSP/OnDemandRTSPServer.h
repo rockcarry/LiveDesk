@@ -5,17 +5,6 @@
 #include <pthread.h>
 #include "rtspserver.h"
 
-enum {
-    AIDEV_CMD_STOP = 0,
-    AIDEV_CMD_RESET_BUFFER,
-};
-
-enum {
-    VIENC_CMD_STOP = 0,
-    VIENC_CMD_RESET_BUFFER,
-    VIENC_CMD_REQUEST_IDR,
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,8 +18,8 @@ typedef struct {
     int             running_streams;
     void           *adev;
     void           *vdev;
-    PFN_READDATA    aread;
-    PFN_READDATA    vread;
+    PFN_CTRL       actrl;
+    PFN_CTRL       vctrl;
 } RTSPSERVER;
 
 int rtsp_servermain(RTSPSERVER *server, char *pexit);

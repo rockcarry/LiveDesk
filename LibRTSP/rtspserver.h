@@ -2,14 +2,16 @@
 #define __RTSPSERVER_H__
 
 #include <stdint.h>
+#include "aidev.h"
+#include "vienc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef int (*PFN_READDATA)(void *ctxt, void *buf, int size, int wait);
+typedef int (*PFN_CTRL)(void *ctxt, int cmd, void *buf, int size);
 
-void* rtspserver_init(void *adev, PFN_READDATA aread, void *vdev, PFN_READDATA vread, int aenc_type, int venc_type, uint8_t *aac_config);
+void* rtspserver_init(void *adev, PFN_CTRL actrl, void *vdev, PFN_CTRL vctrl, int aenc_type, int venc_type, uint8_t *aac_config);
 void  rtspserver_exit(void *ctx);
 int   rtspserver_running_streams(void *ctx);
 

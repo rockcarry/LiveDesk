@@ -11,15 +11,15 @@ static void* rtsp_server_thread_proc(void *argv)
     return NULL;
 }
 
-void* rtspserver_init(void *adev, PFN_READDATA aread, void *vdev, PFN_READDATA vread, int aenc_type, int venc_type, uint8_t *aac_config)
+void* rtspserver_init(void *adev, PFN_CTRL actrl, void *vdev, PFN_CTRL vctrl, int aenc_type, int venc_type, uint8_t *aac_config)
 {
     RTSPSERVER *server = (RTSPSERVER*)calloc(1, sizeof(RTSPSERVER));
     server->audio_enctype = aenc_type;
     server->video_enctype = venc_type;
     server->adev = adev;
-    server->aread= aread;
+    server->actrl= actrl;
     server->vdev = vdev;
-    server->vread= vread;
+    server->vctrl= vctrl;
 
     if (aac_config) {
         server->aac_config[0] = aac_config[0];
@@ -36,6 +36,8 @@ void rtspserver_exit(void *ctx)
     RTSPSERVER *server = (RTSPSERVER*)ctx;
     if (!ctx) return;
 
+    server->actrl(server->adev, AIDEV_CMD_STOP, NULL, 0);
+    server->vctrl(server->vdev, VIENC_CMD_STOP, NULL, 0);
     server->bexit = 1;
     if (server->pthread) pthread_join(server->pthread, NULL);
     free(ctx);

@@ -121,46 +121,39 @@ void aidev_free(void *ctxt)
     free(aidev);
 }
 
-void aidev_start(void *ctxt, int start)
+int aidev_ctrl(void *ctxt, int cmd, void *buf, int size)
 {
     AIDEV *aidev = (AIDEV*)ctxt;
-    if (!aidev || !aidev->hwavein) return;
+    int    ret   = 0;
+    if (!aidev || !aidev->hwavein) return -1;
 
-    if (start) {
+    switch (cmd) {
+    case AIDEV_CMD_START:
         waveInStart(aidev->hwavein);
         aidev->status |= TS_START;
-    } else {
+        return 0;
+    case AIDEV_CMD_STOP:
         waveInStop(aidev->hwavein);
         pthread_mutex_lock(&aidev->mutex);
         aidev->status &=~TS_START;
         pthread_cond_signal(&aidev->cond);
         pthread_mutex_unlock(&aidev->mutex);
-    }
-}
-
-int aidev_read(void *ctxt, void *buf, int size, int wait)
-{
-    AIDEV *aidev = (AIDEV*)ctxt;
-    int    ret   = 0;
-    if (!ctxt) return -1;
-
-    if (buf == NULL) {
-        aidev_start(aidev, size);
+        return 0;
+    case AIDEV_CMD_RESET_BUFFER:
         pthread_mutex_lock(&aidev->mutex);
         aidev->head = aidev->tail = aidev->size = 0;
         pthread_mutex_unlock(&aidev->mutex);
         return 0;
-    }
-
-    pthread_mutex_lock(&aidev->mutex);
-    if (wait) {
+    case AIDEV_CMD_READ:
+        pthread_mutex_lock(&aidev->mutex);
         while (aidev->size <= 0 && (aidev->status & TS_START)) pthread_cond_wait(&aidev->cond, &aidev->mutex);
+        if (aidev->size > 0) {
+            ret = size < aidev->size / WAVE_FRAME_RATE ? size : aidev->size / WAVE_FRAME_RATE;
+            aidev->head = ringbuf_read(aidev->alawbuf, sizeof(aidev->alawbuf), aidev->head, buf, ret);
+            aidev->size-= ret;
+        }
+        pthread_mutex_unlock(&aidev->mutex);
+        return ret;
+    default: return -1;
     }
-    if (aidev->size > 0) {
-        ret = size < aidev->size / WAVE_FRAME_RATE ? size : aidev->size / WAVE_FRAME_RATE;
-        aidev->head = ringbuf_read(aidev->alawbuf, sizeof(aidev->alawbuf), aidev->head, buf, ret);
-        aidev->size-= ret;
-    }
-    pthread_mutex_unlock(&aidev->mutex);
-    return ret;
 }

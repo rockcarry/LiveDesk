@@ -143,34 +143,42 @@ void vienc_start(void *ctxt, int start)
     }
 }
 
-int vienc_read(void *ctxt, void *buf, int size, int wait)
+int vienc_ctrl(void *ctxt, int cmd, void *buf, int size)
 {
     VIENC *enc = (VIENC*)ctxt;
     int    ret   = 0;
     if (!ctxt) return -1;
 
-    if (buf == NULL) {
-        videv_start(enc->videv, size);
-        vienc_start(enc, size);
+    switch (cmd) {
+    case VIENC_CMD_START:
+        videv_start(enc->videv, 1);
+        enc->status |= TS_START;
+        return 0;
+    case VIENC_CMD_STOP:
+        videv_start(enc->videv, 0);
         pthread_mutex_lock(&enc->mutex);
-        switch (size) {
-        case VIENC_CMD_STOP: break;
-        case VIENC_CMD_RESET_BUFFER: enc->head = enc->tail = enc->size = 0; break;
-        case VIENC_CMD_REQUEST_IDR : enc->status |= TS_REQUEST_IDR; break;
-        }
+        enc->status &= ~TS_START;
+        pthread_cond_signal(&enc->cond);
         pthread_mutex_unlock(&enc->mutex);
         return 0;
-    }
-
-    pthread_mutex_lock(&enc->mutex);
-    if (wait) {
+    case VIENC_CMD_RESET_BUFFER:
+        pthread_mutex_lock(&enc->mutex);
+        enc->head = enc->tail = enc->size = 0;
+        pthread_mutex_unlock(&enc->mutex);
+        return 0;
+    case VIENC_CMD_REQUEST_IDR:
+        enc->status |= TS_REQUEST_IDR;
+        return 0;
+    case VIENC_CMD_READ:
+        pthread_mutex_lock(&enc->mutex);
         while (enc->size <= 0 && (enc->status & TS_START)) pthread_cond_wait(&enc->cond, &enc->mutex);
+        if (enc->size > 0) {
+            ret = size < enc->size ? size : enc->size;
+            enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , ret);
+            enc->size-= ret;
+        }
+        pthread_mutex_unlock(&enc->mutex);
+        return ret;
+    default: return -1;
     }
-    if (enc->size > 0) {
-        ret = size < enc->size ? size : enc->size;
-        enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , ret);
-        enc->size-= ret;
-    }
-    pthread_mutex_unlock(&enc->mutex);
-    return ret;
 }

@@ -49,7 +49,7 @@ AACLiveFramedSource::~AACLiveFramedSource() {
 }
 
 void AACLiveFramedSource::doGetNextFrame() {
-    fFrameSize = mServer->aread(mServer->adev, fTo, fMaxSize, 1);
+    fFrameSize = mServer->actrl(mServer->adev, AIDEV_CMD_READ, fTo, fMaxSize);
     gettimeofday(&fPresentationTime, NULL);
     if (fFrameSize > 0 && mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
 

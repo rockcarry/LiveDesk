@@ -3,15 +3,15 @@
 
 void* vienc_init (void *videv, int frate, int w, int h, int bitrate);
 void  vienc_free (void *ctxt);
-void  vienc_start(void *ctxt, int start);
 
-// when buf is NULL, size is used for command
 enum {
-    VIENC_CMD_STOP = 0,
+    VIENC_CMD_READ = 0,
+    VIENC_CMD_START,
+    VIENC_CMD_STOP,
     VIENC_CMD_RESET_BUFFER,
     VIENC_CMD_REQUEST_IDR,
 };
-int vienc_read(void *ctxt, void *buf, int size, int wait);
+int vienc_ctrl(void *ctxt, int cmd, void *buf, int size);
 
 #endif
 
