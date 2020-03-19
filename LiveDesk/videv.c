@@ -40,9 +40,12 @@ typedef struct {
 static void* videv_capture_thread_proc(void *param)
 {
     VIDEV *videv = (VIDEV*)param;
-    uint32_t tickcur = 0, ticknext = 0;
-    int32_t  period = 1000 / videv->frame_rate, ticksleep = 0;
-    AVFrame  picsrc = {0}, picdst = {0};
+    uint32_t   tickcur = 0, ticknext = 0;
+    int32_t    period  = 1000 / videv->frame_rate, ticksleep = 0;
+    AVFrame    picsrc  = {0}, picdst = {0};
+    CURSORINFO curinfo = {0};
+    ICONINFO   icoinfo = {0};
+    HCURSOR    hcursor = NULL;
 
     picsrc.data[0]     = videv->bmp_buffer;
     picsrc.linesize[0] = videv->bmp_stride;
@@ -59,6 +62,11 @@ static void* videv_capture_thread_proc(void *param)
         ticksleep = ticknext - tickcur;
 
         BitBlt(videv->hdcdst, 0, 0, videv->screen_width, videv->screen_height, videv->hdcsrc, 0, 0, SRCCOPY);
+        curinfo.cbSize = sizeof(CURSORINFO);
+        GetCursorInfo(&curinfo);
+        GetIconInfo(curinfo.hCursor, &icoinfo);
+        DrawIcon(videv->hdcdst, curinfo.ptScreenPos.x - icoinfo.xHotspot, curinfo.ptScreenPos.y - icoinfo.xHotspot, curinfo.hCursor);
+
         pthread_mutex_lock(&videv->mutex);
         picdst.data[0] = videv->yuv_buffer + videv->yuv_tail * videv->yuv_width * videv->yuv_height * 3 / 2;
         picdst.data[1] = picdst.data[0] + videv->yuv_width * videv->yuv_height * 4 / 4;
