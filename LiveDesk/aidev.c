@@ -6,19 +6,20 @@
 #include "aidev.h"
 #include "log.h"
 
-#define WAVE_CHANNEL_NUM  1
 #define WAVE_SAMPLE_SIZE  16
-#define WAVE_SAMPLE_RATE  8000
 #define WAVE_FRAME_RATE   25
 #define WAVE_BUFFER_NUM   3
+#define OUT_BUFFER_NUM    3
 
 typedef struct {
     HWAVEIN  hwavein;
+    int      isalaw;
     int      head;
     int      tail;
     int      size;
-    uint8_t  alawbuf[WAVE_BUFFER_NUM * ALIGN(WAVE_SAMPLE_RATE/WAVE_FRAME_RATE, 4)];
-    uint8_t  wavebuf[WAVE_BUFFER_NUM][sizeof(WAVEHDR) + ALIGN(WAVE_SAMPLE_RATE/WAVE_FRAME_RATE, 2) * sizeof(int16_t)];
+    int      outsize;
+    uint8_t *outbuf;
+    uint8_t *wavbuf[WAVE_BUFFER_NUM];
     #define  TS_START (1 << 0)
     int      status;
     pthread_mutex_t mutex;
@@ -40,19 +41,27 @@ static BOOL CALLBACK waveInProc(HWAVEIN hWav, UINT uMsg, DWORD_PTR dwInstance, D
 {
     AIDEV   *aidev = (AIDEV  *)dwInstance;
     WAVEHDR *phdr  = (WAVEHDR*)dwParam1;
-    int      i;
+    int      dropsize, i;
 
     switch (uMsg) {
     case WIM_DATA:
         pthread_mutex_lock(&aidev->mutex);
-        for (i=0; i<(int)(phdr->dwBytesRecorded/sizeof(int16_t)); i++) {
-            aidev->alawbuf[aidev->tail] = pcm2alaw(((int16_t*)phdr->lpData)[i]);
-            if (++aidev->tail == sizeof(aidev->alawbuf)) aidev->tail = 0;
-            if (aidev->size < sizeof(aidev->alawbuf)) {
-                aidev->size++;
-            } else {
-                aidev->head = aidev->tail;
+        if (aidev->isalaw) {
+            for (i=0; i<(int)(phdr->dwBytesRecorded/sizeof(int16_t)); i++) {
+                aidev->outbuf[aidev->tail] = pcm2alaw(((int16_t*)phdr->lpData)[i]);
+                if (++aidev->tail == aidev->outsize) aidev->tail = 0;
+                if (aidev->size < aidev->outsize) {
+                    aidev->size++;
+                } else {
+                    aidev->head = aidev->tail;
+                }
             }
+        } else {
+            dropsize = aidev->size + phdr->dwBytesRecorded - aidev->outsize;
+            if (dropsize > 0) {
+                aidev->head = ringbuf_read(aidev->outbuf, aidev->outsize, aidev->head, NULL, dropsize);
+            }
+            aidev->tail = ringbuf_write(aidev->outbuf, aidev->outsize, aidev->tail, phdr->lpData, phdr->dwBytesRecorded);
         }
         pthread_cond_signal(&aidev->cond);
         pthread_mutex_unlock(&aidev->mutex);
@@ -62,16 +71,25 @@ static BOOL CALLBACK waveInProc(HWAVEIN hWav, UINT uMsg, DWORD_PTR dwInstance, D
     return TRUE;
 }
 
-void* aidev_init(void)
+void* aidev_init(int channels, int samplerate, int isalaw)
 {
     AIDEV       *aidev  = NULL;
     WAVEFORMATEX wavfmt = {0};
-    int          i;
+    int          outsize, wavsize, i;
 
-    aidev = calloc(1, sizeof(AIDEV));
+    outsize = OUT_BUFFER_NUM * ALIGN(samplerate * channels / WAVE_FRAME_RATE, 4) * (isalaw ? sizeof(uint8_t) : sizeof(int16_t));
+    wavsize = sizeof(WAVEHDR) + ALIGN(samplerate * channels / WAVE_FRAME_RATE, 2) * sizeof(int16_t);
+    aidev   = calloc(1, sizeof(AIDEV) + outsize + WAVE_BUFFER_NUM * wavsize);
     if (!aidev) {
         log_printf("failed to allocate memory for AIDEV context !\n");
         return NULL;
+    }
+
+    aidev->isalaw = isalaw;
+    aidev->outsize= outsize;
+    aidev->outbuf = (uint8_t*)aidev + sizeof(AIDEV);
+    for (i=0; i<WAVE_BUFFER_NUM; i++) {
+        aidev->wavbuf[i] = (uint8_t*)aidev + sizeof(AIDEV) + outsize + i * wavsize;
     }
 
     // init mutex & cond
@@ -79,11 +97,11 @@ void* aidev_init(void)
     pthread_cond_init (&aidev->cond , NULL);
 
     wavfmt.wFormatTag     = WAVE_FORMAT_PCM;
-    wavfmt.nChannels      = WAVE_CHANNEL_NUM;
-    wavfmt.nSamplesPerSec = WAVE_SAMPLE_RATE;
+    wavfmt.nChannels      = channels;
+    wavfmt.nSamplesPerSec = samplerate;
     wavfmt.wBitsPerSample = WAVE_SAMPLE_SIZE;
-    wavfmt.nBlockAlign    = WAVE_SAMPLE_SIZE * WAVE_CHANNEL_NUM / 8;
-    wavfmt.nAvgBytesPerSec= WAVE_SAMPLE_RATE * wavfmt.nBlockAlign;
+    wavfmt.nBlockAlign    = WAVE_SAMPLE_SIZE * channels / 8;
+    wavfmt.nAvgBytesPerSec= samplerate * wavfmt.nBlockAlign;
     waveInOpen(&aidev->hwavein, WAVE_MAPPER, &wavfmt, (DWORD_PTR)waveInProc, (DWORD_PTR)aidev, CALLBACK_FUNCTION);
     if (!aidev->hwavein) {
         log_printf("failed to open wavein device !\n");
@@ -92,8 +110,8 @@ void* aidev_init(void)
     }
 
     for (i=0; i<WAVE_BUFFER_NUM; i++) {
-        WAVEHDR *phdr = (WAVEHDR*)aidev->wavebuf[i];
-        phdr->dwBufferLength = sizeof(aidev->wavebuf[i]) - sizeof(WAVEHDR);
+        WAVEHDR *phdr = (WAVEHDR*)aidev->wavbuf[i];
+        phdr->dwBufferLength = wavsize - sizeof(WAVEHDR);
         phdr->lpData         = (LPSTR)phdr + sizeof(WAVEHDR);
         waveInPrepareHeader(aidev->hwavein, phdr, sizeof(WAVEHDR));
         waveInAddBuffer(aidev->hwavein, phdr, sizeof(WAVEHDR));
@@ -109,8 +127,8 @@ void aidev_free(void *ctxt)
     if (!aidev) return;
     if (aidev->hwavein) {
         waveInStop(aidev->hwavein);
-        for (i=0; i<ARRAY_SIZE(aidev->wavebuf); i++) {
-            WAVEHDR *phdr = (WAVEHDR*)aidev->wavebuf[i];
+        for (i=0; i<ARRAY_SIZE(aidev->wavbuf); i++) {
+            WAVEHDR *phdr = (WAVEHDR*)aidev->wavbuf[i];
             waveInUnprepareHeader(aidev->hwavein, phdr, sizeof(WAVEHDR));
         }
         waveInClose(aidev->hwavein);
@@ -148,8 +166,8 @@ int aidev_ctrl(void *ctxt, int cmd, void *buf, int size)
         pthread_mutex_lock(&aidev->mutex);
         while (aidev->size <= 0 && (aidev->status & TS_START)) pthread_cond_wait(&aidev->cond, &aidev->mutex);
         if (aidev->size > 0) {
-            ret = size < aidev->size / WAVE_FRAME_RATE ? size : aidev->size / WAVE_FRAME_RATE;
-            aidev->head = ringbuf_read(aidev->alawbuf, sizeof(aidev->alawbuf), aidev->head, buf, ret);
+            ret = size < aidev->outsize / WAVE_FRAME_RATE ? size : aidev->outsize / WAVE_FRAME_RATE;
+            aidev->head = ringbuf_read(aidev->outbuf, aidev->outsize, aidev->head, buf, ret);
             aidev->size-= ret;
         }
         pthread_mutex_unlock(&aidev->mutex);

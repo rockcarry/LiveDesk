@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
     log_init("DEBUGER");
 
-    live->aidev = aidev_init();
+    live->aidev = aidev_init(1, 8000, 1);
     live->videv = videv_init(VIDEO_FRAME_RATE, VIDEO_WIDTH, VIDEO_HEIGHT);
     live->vienc = vienc_init(live->videv, VIDEO_FRAME_RATE, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_BITRATE);
     live->rtsp  = rtspserver_init(live->aidev, aidev_ctrl, live->vienc, vienc_ctrl, 0, 0, NULL);
