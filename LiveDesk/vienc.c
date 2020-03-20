@@ -130,19 +130,6 @@ void vienc_free(void *ctxt)
     free(enc);
 }
 
-void vienc_start(void *ctxt, int start)
-{
-    VIENC *enc = (VIENC*)ctxt;
-    if (!enc) return;
-    if (start) enc->status |= TS_START;
-    else {
-        pthread_mutex_lock(&enc->mutex);
-        enc->status &= ~TS_START;
-        pthread_cond_signal(&enc->cond);
-        pthread_mutex_unlock(&enc->mutex);
-    }
-}
-
 int vienc_ctrl(void *ctxt, int cmd, void *buf, int size)
 {
     VIENC *enc = (VIENC*)ctxt;
