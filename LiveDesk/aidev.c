@@ -9,16 +9,17 @@
 #define WAVE_SAMPLE_SIZE  16
 #define WAVE_FRAME_RATE   25
 #define WAVE_BUFFER_NUM   3
-#define OUT_BUFFER_NUM    3
 
 typedef struct {
     HWAVEIN  hwavein;
     int      isalaw;
+    int      channels;
+    int      samprate;
     int      head;
     int      tail;
     int      size;
-    int      outsize;
-    uint8_t *outbuf;
+    int      bufsize;
+    uint8_t *buffer;
     uint8_t *wavbuf[WAVE_BUFFER_NUM];
     #define  TS_START (1 << 0)
     int      status;
@@ -48,20 +49,20 @@ static BOOL CALLBACK waveInProc(HWAVEIN hWav, UINT uMsg, DWORD_PTR dwInstance, D
         pthread_mutex_lock(&aidev->mutex);
         if (aidev->isalaw) {
             for (i=0; i<(int)(phdr->dwBytesRecorded/sizeof(int16_t)); i++) {
-                aidev->outbuf[aidev->tail] = pcm2alaw(((int16_t*)phdr->lpData)[i]);
-                if (++aidev->tail == aidev->outsize) aidev->tail = 0;
-                if (aidev->size < aidev->outsize) {
+                aidev->buffer[aidev->tail] = pcm2alaw(((int16_t*)phdr->lpData)[i]);
+                if (++aidev->tail == aidev->bufsize) aidev->tail = 0;
+                if (aidev->size < aidev->bufsize) {
                     aidev->size++;
                 } else {
                     aidev->head = aidev->tail;
                 }
             }
         } else {
-            dropsize = aidev->size + phdr->dwBytesRecorded - aidev->outsize;
+            dropsize = aidev->size + phdr->dwBytesRecorded - aidev->bufsize;
             if (dropsize > 0) {
-                aidev->head = ringbuf_read(aidev->outbuf, aidev->outsize, aidev->head, NULL, dropsize);
+                aidev->head = ringbuf_read(aidev->buffer, aidev->bufsize, aidev->head, NULL, dropsize);
             }
-            aidev->tail = ringbuf_write(aidev->outbuf, aidev->outsize, aidev->tail, phdr->lpData, phdr->dwBytesRecorded);
+            aidev->tail = ringbuf_write(aidev->buffer, aidev->bufsize, aidev->tail, phdr->lpData, phdr->dwBytesRecorded);
         }
         pthread_cond_signal(&aidev->cond);
         pthread_mutex_unlock(&aidev->mutex);
@@ -71,25 +72,26 @@ static BOOL CALLBACK waveInProc(HWAVEIN hWav, UINT uMsg, DWORD_PTR dwInstance, D
     return TRUE;
 }
 
-void* aidev_init(int channels, int samplerate, int isalaw)
+void* aidev_init(int channels, int samplerate, int isalaw, int bufsize)
 {
     AIDEV       *aidev  = NULL;
     WAVEFORMATEX wavfmt = {0};
-    int          outsize, wavsize, i;
+    int          wavsize, i;
 
-    outsize = OUT_BUFFER_NUM * ALIGN(samplerate * channels / WAVE_FRAME_RATE, 4) * (isalaw ? sizeof(uint8_t) : sizeof(int16_t));
     wavsize = sizeof(WAVEHDR) + ALIGN(samplerate * channels / WAVE_FRAME_RATE, 2) * sizeof(int16_t);
-    aidev   = calloc(1, sizeof(AIDEV) + outsize + WAVE_BUFFER_NUM * wavsize);
+    aidev   = calloc(1, sizeof(AIDEV) + bufsize + WAVE_BUFFER_NUM * wavsize);
     if (!aidev) {
         log_printf("failed to allocate memory for AIDEV context !\n");
         return NULL;
     }
 
-    aidev->isalaw = isalaw;
-    aidev->outsize= outsize;
-    aidev->outbuf = (uint8_t*)aidev + sizeof(AIDEV);
+    aidev->isalaw   = isalaw;
+    aidev->channels = channels;
+    aidev->samprate = samplerate;
+    aidev->bufsize  = bufsize;
+    aidev->buffer   = (uint8_t*)aidev + sizeof(AIDEV);
     for (i=0; i<WAVE_BUFFER_NUM; i++) {
-        aidev->wavbuf[i] = (uint8_t*)aidev + sizeof(AIDEV) + outsize + i * wavsize;
+        aidev->wavbuf[i] = (uint8_t*)aidev + sizeof(AIDEV) + bufsize + i * wavsize;
     }
 
     // init mutex & cond
@@ -166,8 +168,8 @@ int aidev_ctrl(void *ctxt, int cmd, void *buf, int size)
         pthread_mutex_lock(&aidev->mutex);
         while (aidev->size <= 0 && (aidev->status & TS_START)) pthread_cond_wait(&aidev->cond, &aidev->mutex);
         if (aidev->size > 0) {
-            ret = size < aidev->outsize / WAVE_FRAME_RATE ? size : aidev->outsize / WAVE_FRAME_RATE;
-            aidev->head = ringbuf_read(aidev->outbuf, aidev->outsize, aidev->head, buf, ret);
+            ret = size < aidev->size ? size : aidev->size;
+            aidev->head = ringbuf_read(aidev->buffer, aidev->bufsize, aidev->head, buf, ret);
             aidev->size-= ret;
         }
         pthread_mutex_unlock(&aidev->mutex);

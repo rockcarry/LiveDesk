@@ -1,7 +1,7 @@
 #ifndef __AIDEV_H__
 #define __AIDEV_H__
 
-void* aidev_init(int channels, int samplerate, int isalaw);
+void* aidev_init(int channels, int samplerate, int isalaw, int bufsize);
 void  aidev_free(void *ctxt);
 
 enum {
