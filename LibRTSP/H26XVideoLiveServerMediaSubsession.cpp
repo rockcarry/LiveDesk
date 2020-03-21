@@ -101,10 +101,10 @@ char const* H26XVideoLiveServerMediaSubsession::getAuxSDPLine(RTPSink* rtpSink, 
 }
 
 FramedSource* H26XVideoLiveServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  mServer->actrl(mServer->adev, AIDEV_CMD_START, NULL, 0);
-  mServer->vctrl(mServer->vdev, AIDEV_CMD_START, NULL, 0);
-  mServer->actrl(mServer->adev, AIDEV_CMD_RESET_BUFFER, NULL, 0);
-  mServer->vctrl(mServer->vdev, VIENC_CMD_RESET_BUFFER, NULL, 0);
+  mServer->actrl(mServer->adev, ADEV_CMD_START, NULL, 0);
+  mServer->vctrl(mServer->vdev, ADEV_CMD_START, NULL, 0);
+  mServer->actrl(mServer->adev, ADEV_CMD_RESET_BUFFER, NULL, 0);
+  mServer->vctrl(mServer->vdev, VENC_CMD_RESET_BUFFER, NULL, 0);
 
   // Create the video source:
   H26XLiveFramedSource* source = H26XLiveFramedSource::createNew(envir(), mServer);
@@ -132,7 +132,7 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 			ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
             void* serverRequestAlternativeByteHandlerClientData) {
   mServer->running_streams++;
-  mServer->vctrl(mServer->vdev, VIENC_CMD_REQUEST_IDR , NULL, 0);
+  mServer->vctrl(mServer->vdev, VENC_CMD_REQUEST_IDR , NULL, 0);
   OnDemandServerMediaSubsession::startStream(clientSessionId, streamToken, rtcpRRHandler, rtcpRRHandlerClientData, rtpSeqNum, rtpTimestamp,
     serverRequestAlternativeByteHandler, serverRequestAlternativeByteHandlerClientData);
 }
@@ -141,8 +141,8 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 void H26XVideoLiveServerMediaSubsession::deleteStream(unsigned clientSessionId, void*& streamToken) {
   mServer->running_streams--;
   if (mServer->running_streams == 0) {
-    mServer->actrl(mServer->adev, AIDEV_CMD_STOP, NULL, 0);
-    mServer->vctrl(mServer->vdev, VIENC_CMD_STOP, NULL, 0);
+    mServer->actrl(mServer->adev, ADEV_CMD_STOP, NULL, 0);
+    mServer->vctrl(mServer->vdev, VENC_CMD_STOP, NULL, 0);
   }
   OnDemandServerMediaSubsession::deleteStream(clientSessionId, streamToken);
 }

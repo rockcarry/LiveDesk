@@ -36,8 +36,8 @@ void rtspserver_exit(void *ctx)
     RTSPSERVER *server = (RTSPSERVER*)ctx;
     if (!ctx) return;
 
-    server->actrl(server->adev, AIDEV_CMD_STOP, NULL, 0);
-    server->vctrl(server->vdev, VIENC_CMD_STOP, NULL, 0);
+    server->actrl(server->adev, ADEV_CMD_STOP, NULL, 0);
+    server->vctrl(server->vdev, VENC_CMD_STOP, NULL, 0);
     server->bexit = 1;
     if (server->pthread) pthread_join(server->pthread, NULL);
     free(ctx);

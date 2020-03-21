@@ -2,8 +2,8 @@
 #define __RTSPSERVER_H__
 
 #include <stdint.h>
-#include "aidev.h"
-#include "vienc.h"
+#include "adev.h"
+#include "venc.h"
 
 #ifdef __cplusplus
 extern "C" {

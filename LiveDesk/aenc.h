@@ -1,0 +1,18 @@
+#ifndef __AENC_H__
+#define __AENC_H__
+
+void* aenc_init(void *adev, int channels, int samplerate, int bitrate);
+void  aenc_free(void *ctxt);
+
+enum {
+    AENC_CMD_READ = 0,
+    AENC_CMD_START,
+    AENC_CMD_STOP,
+    AENC_CMD_RESET_BUFFER,
+    AENC_CMD_GET_AACINFO,
+};
+int aenc_ctrl(void *ctxt, int cmd, void *buf, int size);
+
+#endif
+
+

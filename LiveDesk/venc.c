@@ -3,14 +3,14 @@
 #include <pthread.h>
 #include "stdafx.h"
 #include "ringbuf.h"
-#include "videv.h"
-#include "vienc.h"
+#include "vdev.h"
+#include "venc.h"
 #include "x264.h"
 #include "log.h"
 
 #define ENC_BUF_SIZE  (512 * 1024)
 typedef struct {
-    void    *videv;
+    void    *vdev;
     x264_t  *x264;
     int      width;
     int      height;
@@ -28,11 +28,11 @@ typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
     pthread_t       thread;
-} VIENC;
+} VENC;
 
-static void* vienc_encode_thread_proc(void *param)
+static void* venc_encode_thread_proc(void *param)
 {
-    VIENC   *enc = (VIENC*)param;
+    VENC    *enc = (VENC*)param;
     uint8_t *yuv = NULL;
     x264_picture_t pic_in, pic_out;
     x264_nal_t *nals;
@@ -51,7 +51,7 @@ static void* vienc_encode_thread_proc(void *param)
             usleep(100*1000); continue;
         }
 
-        yuv = videv_lock(enc->videv, 1);
+        yuv = vdev_lock(enc->vdev, 1);
         if (yuv) {
             pic_in.img.plane[0] = yuv;
             pic_in.img.plane[1] = yuv + enc->width * enc->height * 4 / 4;
@@ -65,7 +65,7 @@ static void* vienc_encode_thread_proc(void *param)
         } else {
             len = 0;
         }
-        videv_unlock(enc->videv);
+        vdev_unlock(enc->vdev);
         if (len <= 0) continue;
 
         pthread_mutex_lock(&enc->mutex);
@@ -76,17 +76,17 @@ static void* vienc_encode_thread_proc(void *param)
             enc->size += len;
             pthread_cond_signal(&enc->cond);
         } else {
-            log_printf("vienc drop data !\n");
+            log_printf("venc drop data !\n");
         }
         pthread_mutex_unlock(&enc->mutex);
     }
     return NULL;
 }
 
-void* vienc_init(void *videv, int frate, int w, int h, int bitrate)
+void* venc_init(void *vdev, int frate, int w, int h, int bitrate)
 {
     x264_param_t param;
-    VIENC *enc = calloc(1, sizeof(VIENC));
+    VENC *enc = calloc(1, sizeof(VENC));
     if (!enc) return NULL;
 
     // init mutex & cond
@@ -109,16 +109,16 @@ void* vienc_init(void *videv, int frate, int w, int h, int bitrate)
     param.i_timebase_den   = 1000;
     enc->width = w;
     enc->height= h;
-    enc->videv = videv;
+    enc->vdev  = vdev;
     enc->x264  = x264_encoder_open(&param);
 
-    pthread_create(&enc->thread, NULL, vienc_encode_thread_proc, enc);
+    pthread_create(&enc->thread, NULL, venc_encode_thread_proc, enc);
     return enc;
 }
 
-void vienc_free(void *ctxt)
+void venc_free(void *ctxt)
 {
-    VIENC *enc = (VIENC*)ctxt;
+    VENC *enc = (VENC*)ctxt;
     if (!ctxt) return;
 
     enc->status |= TS_EXIT;
@@ -130,33 +130,33 @@ void vienc_free(void *ctxt)
     free(enc);
 }
 
-int vienc_ctrl(void *ctxt, int cmd, void *buf, int size)
+int venc_ctrl(void *ctxt, int cmd, void *buf, int size)
 {
-    VIENC *enc = (VIENC*)ctxt;
-    int    ret   = 0;
+    VENC *enc = (VENC*)ctxt;
+    int   ret = 0;
     if (!ctxt) return -1;
 
     switch (cmd) {
-    case VIENC_CMD_START:
-        videv_start(enc->videv, 1);
+    case VENC_CMD_START:
+        vdev_start(enc->vdev, 1);
         enc->status |= TS_START;
-        return 0;
-    case VIENC_CMD_STOP:
-        videv_start(enc->videv, 0);
+        break;
+    case VENC_CMD_STOP:
+        vdev_start(enc->vdev, 0);
         pthread_mutex_lock(&enc->mutex);
         enc->status &= ~TS_START;
         pthread_cond_signal(&enc->cond);
         pthread_mutex_unlock(&enc->mutex);
-        return 0;
-    case VIENC_CMD_RESET_BUFFER:
+        break;
+    case VENC_CMD_RESET_BUFFER:
         pthread_mutex_lock(&enc->mutex);
         enc->head = enc->tail = enc->size = 0;
         pthread_mutex_unlock(&enc->mutex);
-        return 0;
-    case VIENC_CMD_REQUEST_IDR:
+        break;
+    case VENC_CMD_REQUEST_IDR:
         enc->status |= TS_REQUEST_IDR;
-        return 0;
-    case VIENC_CMD_READ:
+        break;
+    case VENC_CMD_READ:
         pthread_mutex_lock(&enc->mutex);
         while (enc->size <= 0 && (enc->status & TS_START)) pthread_cond_wait(&enc->cond, &enc->mutex);
         if (enc->size > 0) {
@@ -166,6 +166,6 @@ int vienc_ctrl(void *ctxt, int cmd, void *buf, int size)
         }
         pthread_mutex_unlock(&enc->mutex);
         return ret;
-    default: return -1;
     }
+    return 0;
 }
