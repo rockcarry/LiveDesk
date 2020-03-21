@@ -8,7 +8,7 @@
 #include "faac.h"
 #include "log.h"
 
-#define ENC_BUF_SIZE  (64 * 1024)
+#define ENC_BUF_SIZE  (128 * 1024)
 typedef struct {
     void    *adev;
     uint8_t  buffer[ENC_BUF_SIZE];
@@ -98,25 +98,11 @@ void aenc_free(void *ctxt)
 
     enc->status |= TS_EXIT;
     pthread_join(enc->thread, NULL);
-
     if (enc->faacenc) faacEncClose(enc->faacenc);
 
     pthread_mutex_destroy(&enc->mutex);
     pthread_cond_destroy (&enc->cond );
     free(enc);
-}
-
-void aenc_start(void *ctxt, int start)
-{
-    AENC *enc = (AENC*)ctxt;
-    if (!enc) return;
-    if (start) enc->status |= TS_START;
-    else {
-        pthread_mutex_lock(&enc->mutex);
-        enc->status &= ~TS_START;
-        pthread_cond_signal(&enc->cond);
-        pthread_mutex_unlock(&enc->mutex);
-    }
 }
 
 int aenc_ctrl(void *ctxt, int cmd, void *buf, int size)

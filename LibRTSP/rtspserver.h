@@ -2,7 +2,7 @@
 #define __RTSPSERVER_H__
 
 #include <stdint.h>
-#include "adev.h"
+#include "aenc.h"
 #include "venc.h"
 
 #ifdef __cplusplus

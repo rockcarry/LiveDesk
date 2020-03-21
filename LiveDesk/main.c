@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
     log_init("DEBUGER");
 
-    live->adev = adev_init(channels, samplerate, !aenctype, aenctype ? 16*1024 : 1024);
+    live->adev = adev_init(channels, samplerate, !aenctype, aenctype ? 16*1024 : 960);
     live->aenc = aenc_init(live->adev, channels, samplerate, abitrate);
     live->vdev = vdev_init(framerate, vwidth, vheight);
     live->venc = venc_init(live->vdev, framerate, vwidth, vheight, vbitrate);

@@ -101,9 +101,9 @@ char const* H26XVideoLiveServerMediaSubsession::getAuxSDPLine(RTPSink* rtpSink, 
 }
 
 FramedSource* H26XVideoLiveServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  mServer->actrl(mServer->adev, ADEV_CMD_START, NULL, 0);
-  mServer->vctrl(mServer->vdev, ADEV_CMD_START, NULL, 0);
-  mServer->actrl(mServer->adev, ADEV_CMD_RESET_BUFFER, NULL, 0);
+  mServer->actrl(mServer->adev, AENC_CMD_START, NULL, 0);
+  mServer->vctrl(mServer->vdev, AENC_CMD_START, NULL, 0);
+  mServer->actrl(mServer->adev, AENC_CMD_RESET_BUFFER, NULL, 0);
   mServer->vctrl(mServer->vdev, VENC_CMD_RESET_BUFFER, NULL, 0);
 
   // Create the video source:
@@ -141,7 +141,7 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 void H26XVideoLiveServerMediaSubsession::deleteStream(unsigned clientSessionId, void*& streamToken) {
   mServer->running_streams--;
   if (mServer->running_streams == 0) {
-    mServer->actrl(mServer->adev, ADEV_CMD_STOP, NULL, 0);
+    mServer->actrl(mServer->adev, AENC_CMD_STOP, NULL, 0);
     mServer->vctrl(mServer->vdev, VENC_CMD_STOP, NULL, 0);
   }
   OnDemandServerMediaSubsession::deleteStream(clientSessionId, streamToken);
