@@ -35,20 +35,20 @@ int main(int argc, char *argv[])
     for (i=1; i<argc; i++) {
         if (strcmp(argv[i], "-aac") == 0) {
             aenctype = 1;
-        } else if (strstr(argv[i], "-channels") == argv[i]) {
-            channels = atoi(argv[i] + 9);
-        } else if (strstr(argv[i], "-samplerate") == argv[i]) {
-            samplerate = atoi(argv[i] + 11);
-        } else if (strstr(argv[i], "-abitrate") == argv[i]) {
-            abitrate = atoi(argv[i] + 9);
-        } else if (strstr(argv[i], "-vwidth") == argv[i]) {
-            vwidth = atoi(argv[i] + 7);
-        } else if (strstr(argv[i], "-vheight") == argv[i]) {
-            vheight = atoi(argv[i] + 8);
-        } else if (strstr(argv[i], "-framerate") == argv[i]) {
-            framerate = atoi(argv[i] + 10);
-        } else if (strstr(argv[i], "-vbitrate") == argv[i]) {
-            vbitrate  = atoi(argv[i] + 9);
+        } else if (strstr(argv[i], "-channels=") == argv[i]) {
+            channels = atoi(argv[i] + 10);
+        } else if (strstr(argv[i], "-samplerate=") == argv[i]) {
+            samplerate = atoi(argv[i] + 12);
+        } else if (strstr(argv[i], "-abitrate=") == argv[i]) {
+            abitrate = atoi(argv[i] + 10);
+        } else if (strstr(argv[i], "-vwidth=") == argv[i]) {
+            vwidth = atoi(argv[i] + 8);
+        } else if (strstr(argv[i], "-vheight=") == argv[i]) {
+            vheight = atoi(argv[i] + 9);
+        } else if (strstr(argv[i], "-framerate=") == argv[i]) {
+            framerate = atoi(argv[i] + 11);
+        } else if (strstr(argv[i], "-vbitrate=") == argv[i]) {
+            vbitrate  = atoi(argv[i] + 10);
         }
     }
     if (!aenctype) {
