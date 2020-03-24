@@ -69,12 +69,10 @@ int main(int argc, char *argv[])
     log_init("DEBUGER");
 
     live->adev = adev_init(channels, samplerate, !aenctype, aenctype ? 16*1024 : 960);
-    live->aenc = aenc_init(live->adev, channels, samplerate, abitrate);
+    live->aenc = aenc_init(live->adev, channels, samplerate, abitrate, &aacinfo);
     live->vdev = vdev_init(framerate, vwidth, vheight);
     live->venc = venc_init(live->vdev, framerate, vwidth, vheight, vbitrate);
-
-    aenc_ctrl(live->aenc, AENC_CMD_GET_AACINFO, &aacinfo, 0);
-    live->rtsp = rtspserver_init(aenctype ? live->aenc : live->adev, aenctype ? aenc_ctrl : adev_ctrl, live->venc, venc_ctrl, aenctype, venctype, aacinfo);
+    live->rtsp = rtspserver_init(aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo);
 
     while (!(live->status & TS_EXIT)) {
         int cmd = _getch();

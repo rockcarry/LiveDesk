@@ -145,39 +145,36 @@ void vdev_free(void *ctxt)
     free(vdev);
 }
 
-void vdev_start(void *ctxt, int start)
+int vdev_ioctl(void *ctxt, int cmd, void *buf, int size)
 {
     VDEV *vdev = (VDEV*)ctxt;
-    if (!vdev) return;
-    if (start) vdev->status |= TS_START;
-    else {
+    if (!ctxt) return -1;
+
+    switch (cmd) {
+    case VDEV_CMD_START:
+        vdev->status |= TS_START;
+        break;
+    case VDEV_CMD_STOP:
         pthread_mutex_lock(&vdev->mutex);
         vdev->status &= ~TS_START;
         pthread_cond_signal(&vdev->cond);
         pthread_mutex_unlock(&vdev->mutex);
-    }
-}
-
-void* vdev_lock(void *ctxt, int wait)
-{
-    VDEV   *vdev = (VDEV*)ctxt;
-    uint8_t *buf = NULL;
-    if (!ctxt) return NULL;
-    pthread_mutex_lock(&vdev->mutex);
-    if (wait) {
+        break;
+    case VDEV_CMD_LOCK:
+        pthread_mutex_lock(&vdev->mutex);
         while (vdev->yuv_size <= 0 && (vdev->status & TS_START)) pthread_cond_wait(&vdev->cond, &vdev->mutex);
+        if (vdev->yuv_size > 0) {
+            *(void**)buf = vdev->yuv_buffer + vdev->yuv_head * vdev->yuv_width * vdev->yuv_height * 3 / 2;
+            vdev->yuv_size--;
+            if (++vdev->yuv_head == VDEV_BUFFER_NUM) vdev->yuv_head = 0;
+        } else {
+            *(void**)buf = NULL;
+        }
+        break;
+    case VDEV_CMD_UNLOCK:
+        pthread_mutex_unlock(&vdev->mutex);
+        break;
+    default: return -1;
     }
-    if (vdev->yuv_size > 0) {
-        buf = vdev->yuv_buffer + vdev->yuv_head * vdev->yuv_width * vdev->yuv_height * 3 / 2;
-        vdev->yuv_size--;
-        if (++vdev->yuv_head == VDEV_BUFFER_NUM) vdev->yuv_head = 0;
-    }
-    return buf;
-}
-
-void vdev_unlock(void *ctxt)
-{
-    VDEV *vdev = (VDEV*)ctxt;
-    if (!ctxt) return;
-    pthread_mutex_unlock(&vdev->mutex);
+    return 0;
 }

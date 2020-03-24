@@ -37,7 +37,7 @@ H26XLiveFramedSource::~H26XLiveFramedSource() {
 }
 
 void H26XLiveFramedSource::doGetNextFrame() {
-    fFrameSize = mServer->vctrl(mServer->vdev, VENC_CMD_READ, fTo, fMaxSize);
+    fFrameSize = mServer->vioctl(mServer->vdev, VENC_CMD_READ, fTo, fMaxSize);
     gettimeofday(&fPresentationTime, NULL);
     if (fFrameSize > 0 && mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
 

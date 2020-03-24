@@ -9,9 +9,9 @@ enum {
     ADEV_CMD_START,
     ADEV_CMD_STOP,
     ADEV_CMD_RESET_BUFFER,
-    ADEV_LOCK_BUFFER,
+    ADEV_LOCK_BUFFER = 0x1000,
     ADEV_UNLOCK_BUFFER,
 };
-int adev_ctrl(void *ctxt, int cmd, void *buf, int size);
+int adev_ioctl(void *ctxt, int cmd, void *buf, int size);
 
 #endif

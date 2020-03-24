@@ -51,7 +51,7 @@ static void* venc_encode_thread_proc(void *param)
             usleep(100*1000); continue;
         }
 
-        yuv = vdev_lock(enc->vdev, 1);
+        vdev_ioctl(enc->vdev, VDEV_CMD_LOCK, &yuv, 0);
         if (yuv) {
             pic_in.img.plane[0] = yuv;
             pic_in.img.plane[1] = yuv + enc->width * enc->height * 4 / 4;
@@ -65,7 +65,7 @@ static void* venc_encode_thread_proc(void *param)
         } else {
             len = 0;
         }
-        vdev_unlock(enc->vdev);
+        vdev_ioctl(enc->vdev, VDEV_CMD_UNLOCK, NULL, 0);
         if (len <= 0) continue;
 
         pthread_mutex_lock(&enc->mutex);
@@ -130,7 +130,7 @@ void venc_free(void *ctxt)
     free(enc);
 }
 
-int venc_ctrl(void *ctxt, int cmd, void *buf, int size)
+int venc_ioctl(void *ctxt, int cmd, void *buf, int size)
 {
     VENC *enc = (VENC*)ctxt;
     int   ret = 0;
@@ -138,11 +138,11 @@ int venc_ctrl(void *ctxt, int cmd, void *buf, int size)
 
     switch (cmd) {
     case VENC_CMD_START:
-        vdev_start(enc->vdev, 1);
+        vdev_ioctl(enc->vdev, VDEV_CMD_START, NULL, 0);
         enc->status |= TS_START;
         break;
     case VENC_CMD_STOP:
-        vdev_start(enc->vdev, 0);
+        vdev_ioctl(enc->vdev, VDEV_CMD_STOP, NULL, 0);
         pthread_mutex_lock(&enc->mutex);
         enc->status &= ~TS_START;
         pthread_cond_signal(&enc->cond);
@@ -166,6 +166,7 @@ int venc_ctrl(void *ctxt, int cmd, void *buf, int size)
         }
         pthread_mutex_unlock(&enc->mutex);
         return ret;
+    default: return -1;
     }
     return 0;
 }

@@ -7,7 +7,7 @@
 #include "log.h"
 
 #define WAVE_SAMPLE_SIZE  16
-#define WAVE_FRAME_RATE   25
+#define WAVE_FRAME_RATE   50
 #define WAVE_BUFFER_NUM   3
 
 typedef struct {
@@ -142,7 +142,7 @@ void adev_free(void *ctxt)
     free(adev);
 }
 
-int adev_ctrl(void *ctxt, int cmd, void *buf, int size)
+int adev_ioctl(void *ctxt, int cmd, void *buf, int size)
 {
     ADEV *adev = (ADEV*)ctxt;
     int   ret  = 0;
@@ -167,7 +167,7 @@ int adev_ctrl(void *ctxt, int cmd, void *buf, int size)
         break;
     case ADEV_CMD_READ:
         pthread_mutex_lock(&adev->mutex);
-        while (adev->size <= 0 && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
+        while (adev->size < size && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
         if (adev->size > 0) {
             ret = size < adev->size ? size : adev->size;
             adev->head = ringbuf_read(adev->buffer, adev->bufsize, adev->head, buf, ret);
@@ -186,6 +186,7 @@ int adev_ctrl(void *ctxt, int cmd, void *buf, int size)
     case ADEV_UNLOCK_BUFFER:
         pthread_mutex_unlock(&adev->mutex);
         break;
+    default: return -1;
     }
     return 0;
 }

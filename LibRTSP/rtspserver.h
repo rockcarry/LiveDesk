@@ -9,9 +9,9 @@
 extern "C" {
 #endif
 
-typedef int (*PFN_CTRL)(void *ctxt, int cmd, void *buf, int size);
+typedef int (*PFN_IOCTL)(void *ctxt, int cmd, void *buf, int size);
 
-void* rtspserver_init(void *adev, PFN_CTRL actrl, void *vdev, PFN_CTRL vctrl, int aenc_type, int venc_type, uint8_t *aac_config);
+void* rtspserver_init(void *adev, PFN_IOCTL aioctl, void *vdev, PFN_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config);
 void  rtspserver_exit(void *ctx);
 int   rtspserver_running_streams(void *ctx);
 

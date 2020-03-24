@@ -43,9 +43,9 @@ static void* aenc_encode_thread_proc(void *param)
             usleep(100*1000); continue;
         }
 
-        adev_ctrl(enc->adev, ADEV_LOCK_BUFFER, (void*)&inbuf, enc->insamples * sizeof(int16_t));
+        adev_ioctl(enc->adev, ADEV_LOCK_BUFFER, (void*)&inbuf, enc->insamples * sizeof(int16_t));
         len = faacEncEncode(enc->faacenc, (int32_t*)inbuf, enc->insamples, outbuf, sizeof(outbuf));
-        adev_ctrl(enc->adev, ADEV_UNLOCK_BUFFER, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_UNLOCK_BUFFER, NULL, 0);
 
         pthread_mutex_lock(&enc->mutex);
         if (len > 0 && len + (int)sizeof(int32_t) <= (int)sizeof(enc->buffer) - enc->size) {
@@ -61,7 +61,7 @@ static void* aenc_encode_thread_proc(void *param)
     return NULL;
 }
 
-void* aenc_init(void *adev, int channels, int samplerate, int bitrate)
+void* aenc_init(void *adev, int channels, int samplerate, int bitrate, char **aacinfo)
 {
     faacEncConfigurationPtr conf;
     AENC *enc = calloc(1, sizeof(AENC));
@@ -86,6 +86,7 @@ void* aenc_init(void *adev, int channels, int samplerate, int bitrate)
     conf->quantqual     = 88;
     faacEncSetConfiguration(enc->faacenc, conf);
     faacEncGetDecoderSpecificInfo(enc->faacenc, &enc->aaccfgptr, &enc->aaccfgsize);
+    if (aacinfo) *aacinfo = enc->aaccfgptr;
 
     pthread_create(&enc->thread, NULL, aenc_encode_thread_proc, enc);
     return enc;
@@ -105,7 +106,7 @@ void aenc_free(void *ctxt)
     free(enc);
 }
 
-int aenc_ctrl(void *ctxt, int cmd, void *buf, int size)
+int aenc_ioctl(void *ctxt, int cmd, void *buf, int size)
 {
     AENC   *enc = (AENC*)ctxt;
     int32_t framesize, readsize = 0;
@@ -113,11 +114,11 @@ int aenc_ctrl(void *ctxt, int cmd, void *buf, int size)
 
     switch (cmd) {
     case AENC_CMD_START:
-        adev_ctrl(enc->adev, ADEV_CMD_START, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_CMD_START, NULL, 0);
         enc->status |= TS_START;
         break;
     case AENC_CMD_STOP:
-        adev_ctrl(enc->adev, ADEV_CMD_STOP, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_CMD_STOP, NULL, 0);
         pthread_mutex_lock(&enc->mutex);
         enc->status &= ~TS_START;
         pthread_cond_signal(&enc->cond);
@@ -144,9 +145,7 @@ int aenc_ctrl(void *ctxt, int cmd, void *buf, int size)
         }
         pthread_mutex_unlock(&enc->mutex);
         return readsize;
-    case AENC_CMD_GET_AACINFO:
-        *(void**)buf = enc->aaccfgptr;
-        break;
+    default: return -1;
     }
     return 0;
 }
