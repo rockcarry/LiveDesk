@@ -145,7 +145,7 @@ void vdev_free(void *ctxt)
     free(vdev);
 }
 
-int vdev_ioctl(void *ctxt, int cmd, void *buf, int size)
+int vdev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     VDEV *vdev = (VDEV*)ctxt;
     if (!ctxt) return -1;

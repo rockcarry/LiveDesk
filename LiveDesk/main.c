@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     live->aenc = aenc_init(live->adev, channels, samplerate, abitrate, &aacinfo);
     live->vdev = vdev_init(framerate, vwidth, vheight);
     live->venc = venc_init(live->vdev, framerate, vwidth, vheight, vbitrate);
-    live->rtsp = rtspserver_init(aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo);
+    live->rtsp = rtspserver_init(aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate);
 
     while (!(live->status & TS_EXIT)) {
         int cmd = _getch();

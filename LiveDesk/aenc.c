@@ -43,12 +43,12 @@ static void* aenc_encode_thread_proc(void *param)
             usleep(100*1000); continue;
         }
 
-        adev_ioctl(enc->adev, ADEV_LOCK_BUFFER, (void*)&inbuf, enc->insamples * sizeof(int16_t));
-        len = faacEncEncode(enc->faacenc, (int32_t*)inbuf, enc->insamples, outbuf, sizeof(outbuf));
-        adev_ioctl(enc->adev, ADEV_UNLOCK_BUFFER, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_LOCK_BUFFER, (void*)&inbuf, enc->insamples * sizeof(int16_t), NULL);
+        do { len = faacEncEncode(enc->faacenc, (int32_t*)inbuf, enc->insamples, outbuf, sizeof(outbuf)); } while (!(enc->status & TS_EXIT) && len == 0);
+        adev_ioctl(enc->adev, ADEV_UNLOCK_BUFFER, NULL, 0, NULL);
 
         pthread_mutex_lock(&enc->mutex);
-        if (len > 0 && len + (int)sizeof(int32_t) <= (int)sizeof(enc->buffer) - enc->size) {
+        if (len > 0 && sizeof(len) + len <= sizeof(enc->buffer) - enc->size) {
             enc->tail  = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, (uint8_t*)&len, sizeof(len));
             enc->tail  = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, outbuf, len);
             enc->size += sizeof(int32_t) + len;
@@ -106,7 +106,7 @@ void aenc_free(void *ctxt)
     free(enc);
 }
 
-int aenc_ioctl(void *ctxt, int cmd, void *buf, int size)
+int aenc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     AENC   *enc = (AENC*)ctxt;
     int32_t framesize, readsize = 0;
@@ -114,11 +114,11 @@ int aenc_ioctl(void *ctxt, int cmd, void *buf, int size)
 
     switch (cmd) {
     case AENC_CMD_START:
-        adev_ioctl(enc->adev, ADEV_CMD_START, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_CMD_START, NULL, 0, NULL);
         enc->status |= TS_START;
         break;
     case AENC_CMD_STOP:
-        adev_ioctl(enc->adev, ADEV_CMD_STOP, NULL, 0);
+        adev_ioctl(enc->adev, ADEV_CMD_STOP, NULL, 0, NULL);
         pthread_mutex_lock(&enc->mutex);
         enc->status &= ~TS_START;
         pthread_cond_signal(&enc->cond);
@@ -135,13 +135,11 @@ int aenc_ioctl(void *ctxt, int cmd, void *buf, int size)
         if (enc->size > 0) {
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head, (uint8_t*)&framesize , sizeof(framesize));
             enc->size-= sizeof(framesize);
-            readsize  = size < framesize ? size : framesize;
-            if (readsize < framesize) {
-                log_printf("AENC_CMD_READ drop data %d !\n", framesize - readsize);
-            }
+            readsize  = bsize < framesize ? bsize : framesize;
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , readsize);
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  NULL, framesize - readsize);
             enc->size-= framesize;
+            if (fsize) *fsize = framesize;
         }
         pthread_mutex_unlock(&enc->mutex);
         return readsize;

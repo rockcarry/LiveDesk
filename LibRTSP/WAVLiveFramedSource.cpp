@@ -39,7 +39,7 @@ WAVLiveFramedSource::~WAVLiveFramedSource() {
 }
 
 void WAVLiveFramedSource::doGetNextFrame() {
-    fFrameSize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, 160);
+    fFrameSize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, 160, NULL);
     fDurationInMicroseconds = 1000000 * fFrameSize / fSamplingFrequency;
     gettimeofday(&fPresentationTime, NULL);
 

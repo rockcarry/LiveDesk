@@ -12,6 +12,6 @@ enum {
     ADEV_LOCK_BUFFER = 0x1000,
     ADEV_UNLOCK_BUFFER,
 };
-int adev_ioctl(void *ctxt, int cmd, void *buf, int size);
+int adev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
 
 #endif

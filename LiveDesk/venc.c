@@ -36,7 +36,7 @@ static void* venc_encode_thread_proc(void *param)
     uint8_t *yuv = NULL;
     x264_picture_t pic_in, pic_out;
     x264_nal_t *nals;
-    int     len, num, i;
+    int32_t len, num, i;
 
     x264_picture_init(&pic_in );
     x264_picture_init(&pic_out);
@@ -51,7 +51,7 @@ static void* venc_encode_thread_proc(void *param)
             usleep(100*1000); continue;
         }
 
-        vdev_ioctl(enc->vdev, VDEV_CMD_LOCK, &yuv, 0);
+        vdev_ioctl(enc->vdev, VDEV_CMD_LOCK, &yuv, 0, NULL);
         if (yuv) {
             pic_in.img.plane[0] = yuv;
             pic_in.img.plane[1] = yuv + enc->width * enc->height * 4 / 4;
@@ -65,18 +65,19 @@ static void* venc_encode_thread_proc(void *param)
         } else {
             len = 0;
         }
-        vdev_ioctl(enc->vdev, VDEV_CMD_UNLOCK, NULL, 0);
+        vdev_ioctl(enc->vdev, VDEV_CMD_UNLOCK, NULL, 0, NULL);
         if (len <= 0) continue;
 
         pthread_mutex_lock(&enc->mutex);
-        if (len <= (int)sizeof(enc->buffer) - enc->size) {
+        if (sizeof(len) + len <= sizeof(enc->buffer) - enc->size) {
+            enc->tail = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, (uint8_t*)&len, sizeof(len));
             for (i=0; i<num; i++) {
                 enc->tail = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, nals[i].p_payload, nals[i].i_payload);
             }
-            enc->size += len;
+            enc->size += sizeof(len) + len;
             pthread_cond_signal(&enc->cond);
         } else {
-            log_printf("venc drop data !\n");
+            log_printf("venc drop data %d !\n", len);
         }
         pthread_mutex_unlock(&enc->mutex);
     }
@@ -130,19 +131,19 @@ void venc_free(void *ctxt)
     free(enc);
 }
 
-int venc_ioctl(void *ctxt, int cmd, void *buf, int size)
+int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     VENC *enc = (VENC*)ctxt;
-    int   ret = 0;
+    int32_t framesize, readsize = 0;
     if (!ctxt) return -1;
 
     switch (cmd) {
     case VENC_CMD_START:
-        vdev_ioctl(enc->vdev, VDEV_CMD_START, NULL, 0);
+        vdev_ioctl(enc->vdev, VDEV_CMD_START, NULL, 0, NULL);
         enc->status |= TS_START;
         break;
     case VENC_CMD_STOP:
-        vdev_ioctl(enc->vdev, VDEV_CMD_STOP, NULL, 0);
+        vdev_ioctl(enc->vdev, VDEV_CMD_STOP, NULL, 0, NULL);
         pthread_mutex_lock(&enc->mutex);
         enc->status &= ~TS_START;
         pthread_cond_signal(&enc->cond);
@@ -160,12 +161,16 @@ int venc_ioctl(void *ctxt, int cmd, void *buf, int size)
         pthread_mutex_lock(&enc->mutex);
         while (enc->size <= 0 && (enc->status & TS_START)) pthread_cond_wait(&enc->cond, &enc->mutex);
         if (enc->size > 0) {
-            ret = size < enc->size ? size : enc->size;
-            enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , ret);
-            enc->size-= ret;
+            enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head, (uint8_t*)&framesize , sizeof(framesize));
+            enc->size-= sizeof(framesize);
+            readsize  = bsize < framesize ? bsize : framesize;
+            enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , readsize);
+            enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  NULL, framesize - readsize);
+            enc->size-= framesize;
+            if (fsize) *fsize = framesize;
         }
         pthread_mutex_unlock(&enc->mutex);
-        return ret;
+        return readsize;
     default: return -1;
     }
     return 0;

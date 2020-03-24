@@ -13,6 +13,7 @@ typedef struct {
     int             audio_enctype; // 0 - alaw, 1 - aac
     int             video_enctype; // 0 - h264, 1 - h265
     uint8_t         aac_config[2]; // aac_config
+    int             frate;         // video frame rate
     pthread_t       pthread;
     char            bexit;
     int             running_streams;

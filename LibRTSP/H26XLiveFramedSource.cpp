@@ -30,14 +30,22 @@ H26XLiveFramedSource::createNew(UsageEnvironment& env, RTSPSERVER* server) {
 }
 
 H26XLiveFramedSource::H26XLiveFramedSource(UsageEnvironment& env, RTSPSERVER* server)
-    : FramedSource(env), mServer(server), mMaxFrameSize(128*1024) {
+    : FramedSource(env), mServer(server), mMaxFrameSize(256*1024) {
+    fuSecsPerFrame = 1000000 / mServer->frate;
 }
 
 H26XLiveFramedSource::~H26XLiveFramedSource() {
 }
 
 void H26XLiveFramedSource::doGetNextFrame() {
-    fFrameSize = mServer->vioctl(mServer->vdev, VENC_CMD_READ, fTo, fMaxSize);
+    int readsize = mServer->vioctl(mServer->vdev, VENC_CMD_READ, fTo, fMaxSize, (int*)&fFrameSize);
+#if 1
+    fNumTruncatedBytes = fFrameSize - readsize;
+    if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
+    fDurationInMicroseconds = fFrameSize ? fuSecsPerFrame : 0;
+#else
+    fFrameSize = readsize;
+#endif
     gettimeofday(&fPresentationTime, NULL);
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:

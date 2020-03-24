@@ -10,7 +10,7 @@ enum {
     AENC_CMD_STOP,
     AENC_CMD_RESET_BUFFER,
 };
-int aenc_ioctl(void *ctxt, int cmd, void *buf, int size);
+int aenc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
 
 #endif
 

@@ -49,7 +49,9 @@ AACLiveFramedSource::~AACLiveFramedSource() {
 }
 
 void AACLiveFramedSource::doGetNextFrame() {
-    fFrameSize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, fMaxSize);
+    int readsize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, fMaxSize, (int*)&fFrameSize);
+    fNumTruncatedBytes = fFrameSize - readsize;
+    if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
     fDurationInMicroseconds = fFrameSize ? fuSecsPerFrame : 0;
     gettimeofday(&fPresentationTime, NULL);
 

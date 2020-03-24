@@ -12,6 +12,6 @@ enum {
     VDEV_CMD_LOCK = 0x1000,
     VDEV_CMD_UNLOCK,
 };
-int vdev_ioctl(void *ctxt, int cmd, void *buf, int size);
+int vdev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
 
 #endif

@@ -8,7 +8,7 @@
 
 #define WAVE_SAMPLE_SIZE  16
 #define WAVE_FRAME_RATE   50
-#define WAVE_BUFFER_NUM   3
+#define WAVE_BUFFER_NUM   6
 
 typedef struct {
     HWAVEIN  hwavein;
@@ -142,7 +142,7 @@ void adev_free(void *ctxt)
     free(adev);
 }
 
-int adev_ioctl(void *ctxt, int cmd, void *buf, int size)
+int adev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     ADEV *adev = (ADEV*)ctxt;
     int   ret  = 0;
@@ -167,9 +167,9 @@ int adev_ioctl(void *ctxt, int cmd, void *buf, int size)
         break;
     case ADEV_CMD_READ:
         pthread_mutex_lock(&adev->mutex);
-        while (adev->size < size && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
+        while (adev->size < bsize && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
         if (adev->size > 0) {
-            ret = size < adev->size ? size : adev->size;
+            ret = bsize < adev->size ? bsize : adev->size;
             adev->head = ringbuf_read(adev->buffer, adev->bufsize, adev->head, buf, ret);
             adev->size-= ret;
         }
@@ -177,12 +177,12 @@ int adev_ioctl(void *ctxt, int cmd, void *buf, int size)
         return ret;
     case ADEV_LOCK_BUFFER:
         pthread_mutex_lock(&adev->mutex);
-        while (adev->size < size && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
+        while (adev->size < bsize && (adev->status & TS_START)) pthread_cond_wait(&adev->cond, &adev->mutex);
         *(void**)buf = &adev->buffer[adev->head];
-        adev->size -= size;
-        adev->head += size;
+        adev->size -= bsize;
+        adev->head += bsize;
         if (adev->head == adev->bufsize) adev->head = 0;
-        return size;
+        return bsize;
     case ADEV_UNLOCK_BUFFER:
         pthread_mutex_unlock(&adev->mutex);
         break;

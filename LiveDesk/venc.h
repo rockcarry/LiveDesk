@@ -11,7 +11,7 @@ enum {
     VENC_CMD_RESET_BUFFER,
     VENC_CMD_REQUEST_IDR = 0x1000,
 };
-int venc_ioctl(void *ctxt, int cmd, void *buf, int size);
+int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
 
 #endif
 

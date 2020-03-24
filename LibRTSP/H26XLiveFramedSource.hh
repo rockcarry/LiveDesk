@@ -37,6 +37,7 @@ protected:
 private:
   RTSPSERVER* mServer;
   unsigned mMaxFrameSize;
+  unsigned fuSecsPerFrame;
 
 private:
   virtual void doGetNextFrame();
