@@ -30,7 +30,7 @@ H26XLiveFramedSource::createNew(UsageEnvironment& env, RTSPSERVER* server) {
 }
 
 H26XLiveFramedSource::H26XLiveFramedSource(UsageEnvironment& env, RTSPSERVER* server)
-    : FramedSource(env), mServer(server), mMaxFrameSize(256*1024) {
+    : FramedSource(env), mServer(server), mMaxFrameSize(512*1024) {
     fuSecsPerFrame = 1000000 / mServer->frate;
 }
 

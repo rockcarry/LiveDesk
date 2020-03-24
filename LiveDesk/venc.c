@@ -8,7 +8,7 @@
 #include "x264.h"
 #include "log.h"
 
-#define ENC_BUF_SIZE  (512 * 1024)
+#define ENC_BUF_SIZE  (1024 * 1024)
 typedef struct {
     void    *vdev;
     x264_t  *x264;

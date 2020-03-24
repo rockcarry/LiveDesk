@@ -8,7 +8,7 @@
 #include "faac.h"
 #include "log.h"
 
-#define ENC_BUF_SIZE  (128 * 1024)
+#define ENC_BUF_SIZE  (256 * 1024)
 typedef struct {
     void    *adev;
     uint8_t  buffer[ENC_BUF_SIZE];
