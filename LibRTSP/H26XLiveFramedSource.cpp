@@ -39,7 +39,6 @@ H26XLiveFramedSource::~H26XLiveFramedSource() {
 void H26XLiveFramedSource::doGetNextFrame() {
     fFrameSize = mServer->vioctl(mServer->vdev, VENC_CMD_READ, fTo, fMaxSize);
     gettimeofday(&fPresentationTime, NULL);
-    if (fFrameSize > 0 && mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:
     nextTask() = envir().taskScheduler().scheduleDelayedTask(0, (TaskFunc*)FramedSource::afterGetting, this);

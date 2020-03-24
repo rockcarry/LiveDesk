@@ -42,7 +42,6 @@ void WAVLiveFramedSource::doGetNextFrame() {
     fFrameSize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, 160);
     fDurationInMicroseconds = 1000000 * fFrameSize / fSamplingFrequency;
     gettimeofday(&fPresentationTime, NULL);
-    if (fFrameSize > 0 && mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:
     nextTask() = envir().taskScheduler().scheduleDelayedTask(0, (TaskFunc*)FramedSource::afterGetting, this);
