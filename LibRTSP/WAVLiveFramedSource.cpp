@@ -18,6 +18,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 // A WAV audio live source
 // Implementation
 
+#include "GroupsockHelper.hh"
 #include "OnDemandRTSPServer.h"
 #include "WAVLiveFramedSource.hh"
 

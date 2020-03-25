@@ -15,10 +15,6 @@ void* rtspserver_init(void *adev, PFN_IOCTL aioctl, void *vdev, PFN_IOCTL vioctl
 void  rtspserver_exit(void *ctx);
 int   rtspserver_running_streams(void *ctx);
 
-#ifdef WIN32
-void gettimeofday(struct timeval *tp, void *tzp);
-#endif
-
 #ifdef __cplusplus
 }
 #endif

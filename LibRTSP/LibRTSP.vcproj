@@ -169,7 +169,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\rtspserver.c"
+				RelativePath=".\RtspServer.cpp"
 				>
 			</File>
 			<File
@@ -207,7 +207,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\rtspserver.h"
+				RelativePath=".\RtspServer.h"
 				>
 			</File>
 			<File

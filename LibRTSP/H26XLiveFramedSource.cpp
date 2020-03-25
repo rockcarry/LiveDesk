@@ -18,6 +18,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
 // Framed File Sources
 // Implementation
 
+#include "GroupsockHelper.hh"
 #include "OnDemandRTSPServer.h"
 #include "H26XLiveFramedSource.hh"
 

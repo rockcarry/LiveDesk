@@ -49,32 +49,3 @@ int rtspserver_running_streams(void *ctx)
     RTSPSERVER *server = (RTSPSERVER*)ctx;
     return server ? server->running_streams : 0;
 }
-
-#ifdef WIN32
-#include <windows.h>
-void gettimeofday(struct timeval *tp, void *tzp)
-{
-    uint64_t intervals;
-    FILETIME ftime;
-
-    GetSystemTimeAsFileTime(&ftime);
-
-    /*
-     * A file time is a 64-bit value that represents the number
-     * of 100-nanosecond intervals that have elapsed since
-     * January 1, 1601 12:00 A.M. UTC.
-     *
-     * Between January 1, 1970 (Epoch) and January 1, 1601 there were
-     * 134744 days,
-     * 11644473600 seconds or
-     * 11644473600,000,000,0 100-nanosecond intervals.
-     *
-     * See also MSKB Q167296.
-     */
-
-    intervals   = ((uint64_t)ftime.dwHighDateTime << 32) | ftime.dwLowDateTime;
-    intervals  -= 116444736000000000;
-    tp->tv_sec  = (long) (intervals / 10000000);
-    tp->tv_usec = (long) (intervals % 10000000) / 10;
-}
-#endif
