@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     int       channels = 1, samplerate = 8000, abitrate = 16000;
     int       vwidth   = GetSystemMetrics(SM_CXSCREEN);
     int       vheight  = GetSystemMetrics(SM_CYSCREEN);
-    int       venctype = 0, framerate= 16, vbitrate = 512000;
+    int       venctype = 0, framerate= 20, vbitrate = 512000;
     uint8_t  *aacinfo  = NULL;
 
     for (i=1; i<argc; i++) {
