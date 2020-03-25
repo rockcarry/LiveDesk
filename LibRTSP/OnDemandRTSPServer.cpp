@@ -73,11 +73,11 @@ int rtsp_servermain(RTSPSERVER *server, char *pexit) {
   {
     char const* streamName = "livedesk";
     ServerMediaSession* sms= ServerMediaSession::createNew(*env, streamName, streamName, descriptionString);
-    sms->addSubsession(H26XVideoLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
     switch (server->audio_enctype) {
-    case 0: sms->addSubsession(WAVAudioLiveServerMediaSubsession ::createNew(*env, server, reuseFirstSource)); break;
-    case 1: sms->addSubsession(AACAudioLiveServerMediaSubsession ::createNew(*env, server, reuseFirstSource)); break;
+    case 0: sms->addSubsession(WAVAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource)); break;
+    case 1: sms->addSubsession(AACAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource)); break;
     }
+    sms->addSubsession(H26XVideoLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
     rtspServer->addServerMediaSession(sms);
     announceStream(rtspServer, sms, streamName);
   }
