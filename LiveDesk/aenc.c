@@ -108,8 +108,9 @@ void aenc_free(void *ctxt)
 
 int aenc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
-    AENC   *enc = (AENC*)ctxt;
-    int32_t framesize = 0, readsize = 0;
+    AENC *enc = (AENC*)ctxt;
+    int32_t framesize = 0, readsize = 0, ret = 0;
+    struct timespec ts;
     if (!ctxt) return -1;
 
     switch (cmd) {
@@ -130,8 +131,12 @@ int aenc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
         pthread_mutex_unlock(&enc->mutex);
         break;
     case AENC_CMD_READ:
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_nsec += 16*1000*1000;
+        ts.tv_sec  += ts.tv_nsec / 1000000000;
+        ts.tv_nsec %= 1000000000;
         pthread_mutex_lock(&enc->mutex);
-        while (enc->size <= 0 && (enc->status & TS_START)) pthread_cond_wait(&enc->cond, &enc->mutex);
+        while (enc->size <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->cond, &enc->mutex, &ts);
         if (enc->size > 0) {
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head, (uint8_t*)&framesize , sizeof(framesize));
             enc->size-= sizeof(framesize);

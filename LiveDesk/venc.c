@@ -70,11 +70,14 @@ static void* venc_encode_thread_proc(void *param)
 
         pthread_mutex_lock(&enc->mutex);
         if (sizeof(len) + len <= sizeof(enc->buffer) - enc->size) {
+#ifdef H26X_FRAMED_READ
             enc->tail = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, (uint8_t*)&len, sizeof(len));
+            enc->size+= sizeof(len);
+#endif
             for (i=0; i<num; i++) {
                 enc->tail = ringbuf_write(enc->buffer, sizeof(enc->buffer), enc->tail, nals[i].p_payload, nals[i].i_payload);
             }
-            enc->size += sizeof(len) + len;
+            enc->size += len;
             pthread_cond_signal(&enc->cond);
         } else {
             log_printf("venc drop data %d !\n", len);
@@ -125,7 +128,7 @@ void venc_free(void *ctxt)
     enc->status |= TS_EXIT;
     pthread_join(enc->thread, NULL);
 
-    x264_encoder_close(enc->x264);
+    if (enc->x264) x264_encoder_close(enc->x264);
     pthread_mutex_destroy(&enc->mutex);
     pthread_cond_destroy (&enc->cond );
     free(enc);
@@ -134,7 +137,8 @@ void venc_free(void *ctxt)
 int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     VENC *enc = (VENC*)ctxt;
-    int32_t framesize = 0, readsize = 0;
+    int32_t framesize = 0, readsize = 0, ret = 0;
+    struct timespec ts;
     if (!ctxt) return -1;
 
     switch (cmd) {
@@ -158,11 +162,19 @@ int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
         enc->status |= TS_REQUEST_IDR;
         break;
     case VENC_CMD_READ:
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_nsec += 16*1000*1000;
+        ts.tv_sec  += ts.tv_nsec / 1000000000;
+        ts.tv_nsec %= 1000000000;
         pthread_mutex_lock(&enc->mutex);
-        while (enc->size <= 0 && (enc->status & TS_START)) pthread_cond_wait(&enc->cond, &enc->mutex);
+        while (enc->size <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->cond, &enc->mutex, &ts);
         if (enc->size > 0) {
+#ifdef H26X_FRAMED_READ
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head, (uint8_t*)&framesize , sizeof(framesize));
             enc->size-= sizeof(framesize);
+#else
+            framesize = enc->size;
+#endif
             readsize  = bsize < framesize ? bsize : framesize;
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , readsize);
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  NULL, framesize - readsize);
