@@ -134,7 +134,7 @@ void venc_free(void *ctxt)
 int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
 {
     VENC *enc = (VENC*)ctxt;
-    int32_t framesize, readsize = 0;
+    int32_t framesize = 0, readsize = 0;
     if (!ctxt) return -1;
 
     switch (cmd) {
@@ -167,8 +167,8 @@ int venc_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize)
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  buf , readsize);
             enc->head = ringbuf_read(enc->buffer, sizeof(enc->buffer), enc->head,  NULL, framesize - readsize);
             enc->size-= framesize;
-            if (fsize) *fsize = framesize;
         }
+        if (fsize) *fsize = framesize;
         pthread_mutex_unlock(&enc->mutex);
         return readsize;
     default: return -1;
