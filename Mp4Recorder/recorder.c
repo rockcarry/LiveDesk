@@ -71,7 +71,7 @@ static void* record_thread_proc(void *argv)
             mp4muxer_video(mp4muxer, buf, readsize, 0);
         }
 
-        if (get_tick_count() - recorder->starttick > recorder->duration) {
+        if ((int)(get_tick_count() - recorder->starttick) > recorder->duration) {
             recorder->starttick += recorder->duration;
             venc_ioctl(recorder->venc, VENC_CMD_REQUEST_IDR , NULL, 0, NULL);
             mp4muxer_exit(mp4muxer);
