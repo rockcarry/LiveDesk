@@ -4,16 +4,21 @@
 #include "OnDemandRTSPServer.h"
 #include "rtspserver.h"
 
+#ifdef WIN32
+#pragma warning(disable:4996)
+#endif
+
 static void* rtsp_server_thread_proc(void *argv)
 {
     RTSPSERVER *server = (RTSPSERVER*)argv;
-    rtsp_servermain(server, &server->bexit);
+    rtsp_servermain(server->name, server, &server->bexit);
     return NULL;
 }
 
-void* rtspserver_init(void *adev, PFN_IOCTL aioctl, void *vdev, PFN_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config, int frate)
+void* rtspserver_init(char *name, void *adev, PFN_IOCTL aioctl, void *vdev, PFN_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config, int frate)
 {
     RTSPSERVER *server = (RTSPSERVER*)calloc(1, sizeof(RTSPSERVER));
+    strncpy(server->name, name, sizeof(server->name));
     server->audio_enctype = aenc_type;
     server->video_enctype = venc_type;
     server->adev  = adev;

@@ -9,7 +9,12 @@
 #include "vdev.h"
 #include "venc.h"
 #include "rtspserver.h"
+#include "recorder.h"
 #include "log.h"
+
+#ifdef WIN32
+#pragma warning(disable:4996)
+#endif
 
 typedef struct {
     void *adev;
@@ -17,6 +22,7 @@ typedef struct {
     void *vdev;
     void *venc;
     void *rtsp;
+    void *rec;
     #define TS_EXIT  (1 << 0)
     int  status;
 } LIVEDESK;
@@ -25,11 +31,14 @@ int main(int argc, char *argv[])
 {
     LIVEDESK  livedesk = {0};
     LIVEDESK *live = &livedesk;
-    int       aenctype = 0, rectype = 0, i;
-    int       channels = 1, samplerate = 8000, abitrate = 16000;
+    int       aenctype = 0; // 0:alaw, 1:aac
+    int       channels = 1, samplerate = 8000, abitrate = 16000, i;
     int       vwidth   = GetSystemMetrics(SM_CXSCREEN);
     int       vheight  = GetSystemMetrics(SM_CYSCREEN);
     int       venctype = 0, framerate= 20, vbitrate = 512000;
+    int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4
+    int       duration = 60000;
+    char      recpath[256] = "livedesk";
     uint8_t  *aacinfo  = NULL;
 
     for (i=1; i<argc; i++) {
@@ -49,13 +58,27 @@ int main(int argc, char *argv[])
             framerate = atoi(argv[i] + 11);
         } else if (strstr(argv[i], "-vbitrate=") == argv[i]) {
             vbitrate  = atoi(argv[i] + 10);
+        } else if (strstr(argv[i], "-rtsp=") == argv[i]) {
+            rectype = 0; strncpy(recpath, argv[i] + 6, sizeof(recpath));
+        } else if (strstr(argv[i], "-rtmp=") == argv[i]) {
+            rectype = 1; strncpy(recpath, argv[i] + 6, sizeof(recpath));
+        } else if (strstr(argv[i], "-mp4=") == argv[i]) {
+            rectype = 2; strncpy(recpath, argv[i] + 5, sizeof(recpath));
+        } else if (strstr(argv[i], "-duration=") == argv[i]) {
+            duration = atoi(argv[i] + 10);
         }
     }
-    if (!aenctype) {
+    if (rectype == 2) {
+        aenctype = 1;
+    }
+    if (aenctype == 0) {
         channels   = 1;
         samplerate = 8000;
         abitrate   = 64000;
     }
+    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : "mp4");
+    printf("recpath   : %s\n", recpath);
+    printf("duration  : %d\n", duration);
     printf("aenctype  : %s\n", aenctype ? "aac" : "alaw");
     printf("channels  : %d\n", channels);
     printf("samplerate: %d\n", samplerate);
@@ -65,6 +88,7 @@ int main(int argc, char *argv[])
     printf("vheight   : %d\n", vheight);
     printf("framerate : %d\n", framerate);
     printf("vbitrate  : %d\n", vbitrate);
+    printf("\n\n");
 
     log_init("DEBUGER");
 
@@ -72,17 +96,35 @@ int main(int argc, char *argv[])
     live->aenc = aenc_init(live->adev, channels, samplerate, abitrate, &aacinfo);
     live->vdev = vdev_init(framerate, vwidth, vheight);
     live->venc = venc_init(live->vdev, framerate, vwidth, vheight, vbitrate);
-    live->rtsp = rtspserver_init(aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate);
 
+    switch (rectype) {
+    case 0: live->rtsp = rtspserver_init(recpath, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate); break;
+    case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, aacinfo, live->aenc, live->venc); break;
+    }
+
+    printf("\n\ntype help for more infomation and command.\n\n");
     while (!(live->status & TS_EXIT)) {
-        int cmd = _getch();
-        switch (cmd) {
-        case 'q': case 'Q':
+        char cmd[256];
+        scanf("%256s", cmd);
+        if (stricmp(cmd, "quit") == 0 || stricmp(cmd, "exit") == 0) {
             live->status |= TS_EXIT;
-            break;
+        } else if (rectype == 2 && stricmp(cmd, "mp4_start") == 0) {
+            ffrecorder_start(live->rec, 1);
+            printf("mp4 file recording started !\n");
+        } else if (rectype == 2 && stricmp(cmd, "mp4_pause") == 0) {
+            ffrecorder_start(live->rec, 0);
+            printf("mp4 file recording paused !\n");
+        } else if (stricmp(cmd, "help") == 0) {
+            printf("\nlivedesk v1.0.0\n\n");
+            printf("available commmand:\n");
+            printf("- help: show this mesage.\n");
+            printf("- quit: quit this program.\n");
+            printf("- mp4_start: start recording screen to mp4 files.\n");
+            printf("- mp4_pause: pause recording screen to mp4 files.\n\n");
         }
     }
 
+    ffrecorder_exit(live->rec );
     rtspserver_exit(live->rtsp);
     venc_free(live->venc);
     vdev_free(live->vdev);

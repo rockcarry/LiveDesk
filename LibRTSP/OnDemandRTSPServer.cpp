@@ -38,7 +38,7 @@ static void announceStream(RTSPServer* rtspServer, ServerMediaSession* sms, char
   delete[] url;
 }
 
-int rtsp_servermain(RTSPSERVER *server, char *pexit) {
+int rtsp_servermain(char *name, RTSPSERVER *server, char *pexit) {
   OutPacketBuffer::maxSize = 512 * 1024;
 
   // Begin by setting up our usage environment:
@@ -71,7 +71,7 @@ int rtsp_servermain(RTSPSERVER *server, char *pexit) {
 
   // A H264/H265 + G711a/AAC video elementary stream:
   {
-    char const* streamName = "livedesk";
+    char const* streamName = server->name;
     ServerMediaSession* sms= ServerMediaSession::createNew(*env, streamName, streamName, descriptionString);
     switch (server->audio_enctype) {
     case 0: sms->addSubsession(WAVAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource)); break;

@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 typedef struct {
+    char            name[256];
     int             audio_enctype; // 0 - alaw, 1 - aac
     int             video_enctype; // 0 - h264, 1 - h265
     uint8_t         aac_config[2]; // aac_config
@@ -23,7 +24,7 @@ typedef struct {
     PFN_IOCTL       vioctl;
 } RTSPSERVER;
 
-int rtsp_servermain(RTSPSERVER *server, char *pexit);
+int rtsp_servermain(char *name, RTSPSERVER *server, char *pexit);
 
 #ifdef __cplusplus
 }

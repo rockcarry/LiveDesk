@@ -1,7 +1,7 @@
 #ifndef __VENC_H__
 #define __VENC_H__
 
-//#define H26X_FRAMED_READ
+#define H26X_FRAMED_READ
 
 void* venc_init(void *vdev, int frate, int w, int h, int bitrate);
 void  venc_free(void *ctxt);

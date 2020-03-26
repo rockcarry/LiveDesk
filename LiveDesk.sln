@@ -4,9 +4,12 @@ Microsoft Visual Studio Solution File, Format Version 9.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LiveDesk", "LiveDesk\LiveDesk.vcproj", "{2DC0CCBE-525B-48C1-9678-3B7DD8BDC6FD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{14CD77DB-F451-4C13-BCF4-B93A786091D0} = {14CD77DB-F451-4C13-BCF4-B93A786091D0}
+		{8E22D8E2-28F4-4C20-A476-C2B2A003D214} = {8E22D8E2-28F4-4C20-A476-C2B2A003D214}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibRTSP", "LibRTSP\LibRTSP.vcproj", "{14CD77DB-F451-4C13-BCF4-B93A786091D0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mp4Recorder", "Mp4Recorder\Mp4Recorder.vcproj", "{8E22D8E2-28F4-4C20-A476-C2B2A003D214}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,6 +25,10 @@ Global
 		{14CD77DB-F451-4C13-BCF4-B93A786091D0}.Debug|Win32.Build.0 = Debug|Win32
 		{14CD77DB-F451-4C13-BCF4-B93A786091D0}.Release|Win32.ActiveCfg = Release|Win32
 		{14CD77DB-F451-4C13-BCF4-B93A786091D0}.Release|Win32.Build.0 = Release|Win32
+		{8E22D8E2-28F4-4C20-A476-C2B2A003D214}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8E22D8E2-28F4-4C20-A476-C2B2A003D214}.Debug|Win32.Build.0 = Debug|Win32
+		{8E22D8E2-28F4-4C20-A476-C2B2A003D214}.Release|Win32.ActiveCfg = Release|Win32
+		{8E22D8E2-28F4-4C20-A476-C2B2A003D214}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

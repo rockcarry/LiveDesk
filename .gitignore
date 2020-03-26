@@ -2,6 +2,7 @@
 *.ncb
 *.suo
 *.user
+*.mp4
 Debug/
 Release/
 debug/

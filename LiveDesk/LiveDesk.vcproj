@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../pthread-win32/include;../ffmpeg-win32/include;../libfaac;../libx264;../LibRTSP"
+				AdditionalIncludeDirectories="../pthread-win32/include;../ffmpeg-win32/include;../libfaac;../libx264;../LibRTSP;../Mp4Recorder"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;inline=_inline"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="../pthread-win32/include;../ffmpeg-win32/include;../libfaac;../libx264;../LibRTSP"
+				AdditionalIncludeDirectories="../pthread-win32/include;../ffmpeg-win32/include;../libfaac;../libx264;../LibRTSP;../Mp4Recorder"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;inline=_inline"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
