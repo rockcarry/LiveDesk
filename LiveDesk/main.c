@@ -22,6 +22,7 @@ typedef struct {
     void *vdev;
     void *venc;
     void *rtsp;
+    void *rtmp;
     void *rec;
     #define TS_EXIT  (1 << 0)
     int  status;
@@ -99,6 +100,7 @@ int main(int argc, char *argv[])
 
     switch (rectype) {
     case 0: live->rtsp = rtspserver_init(recpath, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate); break;
+//  case 1: live->rtmp = rtmp_push_init (recpath, aacinfo); break;
     case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, aacinfo, live->aenc, live->venc); break;
     }
 
@@ -125,6 +127,7 @@ int main(int argc, char *argv[])
     }
 
     ffrecorder_exit(live->rec );
+//  rtmp_push_exit (live->rtmp);
     rtspserver_exit(live->rtsp);
     venc_free(live->venc);
     vdev_free(live->vdev);
