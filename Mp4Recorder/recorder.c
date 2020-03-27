@@ -102,6 +102,7 @@ void* ffrecorder_init(char *name, int duration, int channels, int samprate, int 
 
     // create server thread
     pthread_create(&recorder->pthread, NULL, record_thread_proc, recorder);
+    ffrecorder_start(recorder, 1);
     return recorder;
 }
 
