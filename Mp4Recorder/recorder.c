@@ -40,9 +40,9 @@ typedef struct {
 static void* record_thread_proc(void *argv)
 {
     RECORDER *recorder = (RECORDER*)argv;
-    uint8_t   buf[512*1024]  = "";
-    char      filepath[256]  = "";
-    void     *mp4muxer       = NULL;
+    uint8_t   buf[512*1024];
+    char      filepath[256] = "";
+    void     *mp4muxer      = NULL;
     int       framesize, readsize;
 
     while (!(recorder->status & TS_EXIT)) {
