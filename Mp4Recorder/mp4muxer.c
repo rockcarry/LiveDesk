@@ -26,10 +26,10 @@ static int h264_parse_nalu_header(uint8_t *data, int len)
     return -1;
 }
 
-void h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf, int *sps_len, uint8_t **pps_buf, int *pps_len)
+int h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf, int *sps_len, uint8_t **pps_buf, int *pps_len)
 {
     uint8_t *sbuf, *pbuf;
-    int      slen,  plen, i;
+    int slen, plen, type, i;
 
 #if 0
     printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", data[0 ], data[1 ], data[2 ], data[3 ], data[4 ], data[5 ], data[6 ], data[7 ]);
@@ -55,7 +55,7 @@ void h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf,
             len -= i + 1;
             data+= i + 1;
         } else {
-            return;
+            goto find_frame_data;
         }
         if (len > 2 && (data[0] & 0x1f) == 8) { // find pps
             i = h264_parse_nalu_header(data, len);
@@ -65,7 +65,7 @@ void h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf,
                 len -= i - 2;
                 data+= i - 2;
             } else {
-                return;
+                goto find_frame_data;
             }
         }
         if (sps_buf) *sps_buf = sbuf;
@@ -74,6 +74,21 @@ void h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf,
         if (pps_len) *pps_len = plen;
         if (key    ) *key     = 1;
     }
+
+find_frame_data:
+    while (1) {
+        i = h264_parse_nalu_header(data, len);
+        if (i < 0) break;
+        data += i;
+        len  -= i;
+        if (len >= 2) {
+            type = data[1] & 0x1f;
+            if (type >= 1 && type <= 5) {
+                return len - 1;
+            }
+        }
+    }
+    return 0;
 }
 
 #ifndef offsetof
@@ -864,8 +879,11 @@ void mp4muxer_video(void *ctx, unsigned char *buf, int len, unsigned pts)
     int      spslen,  ppslen;
     if (!ctx) return;
 
-    h264_parse_key_sps_pps(buf, len, &key, &spsbuf, &spslen, &ppsbuf, &ppslen);
-    fsize = htonl(len);
+    fsize = h264_parse_key_sps_pps(buf, len, &key, &spsbuf, &spslen, &ppsbuf, &ppslen);
+    if (fsize == 0) return;
+    buf +=(len - fsize);
+    len  = fsize;
+    fsize= htonl(fsize);
 
     if (!mp4->avcc_sps_len && spslen) mp4muxer_spspps(mp4, spsbuf, spslen, NULL, 0);
     if (!mp4->avcc_pps_len && ppslen) mp4muxer_spspps(mp4, NULL, 0, ppsbuf, ppslen);
