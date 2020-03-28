@@ -9,6 +9,7 @@
 #include "vdev.h"
 #include "venc.h"
 #include "rtspserver.h"
+#include "rtmppusher.h"
 #include "recorder.h"
 #include "log.h"
 
@@ -92,7 +93,6 @@ int main(int argc, char *argv[])
     printf("\n\n");
 
     log_init("DEBUGER");
-
     live->adev = adev_init(channels, samplerate, !aenctype, aenctype ? 16*1024 : 960);
     live->aenc = aenc_init(live->adev, channels, samplerate, abitrate, &aacinfo);
     live->vdev = vdev_init(framerate, vwidth, vheight);
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     switch (rectype) {
     case 0: live->rtsp = rtspserver_init(recpath, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate); break;
-//  case 1: live->rtmp = rtmp_push_init (recpath, aacinfo); break;
+    case 1: live->rtmp = rtmppusher_init(recpath, aenctype, aacinfo, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl); break;
     case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, aacinfo, live->aenc, live->venc); break;
     }
 
@@ -116,6 +116,12 @@ int main(int argc, char *argv[])
         } else if (rectype == 2 && stricmp(cmd, "mp4_pause") == 0) {
             ffrecorder_start(live->rec, 0);
             printf("mp4 file recording paused !\n");
+        } else if (rectype == 1 && stricmp(cmd, "rtmp_start") == 0) {
+            rtmppusher_start(live->rtmp, 1);
+            printf("rtmp push started !\n");
+        } else if (rectype == 1 && stricmp(cmd, "rtmp_pause") == 0) {
+            rtmppusher_start(live->rtmp, 0);
+            printf("rtmp push paused !\n");
         } else if (stricmp(cmd, "help") == 0) {
             printf("\nlivedesk v1.0.0\n\n");
             printf("available commmand:\n");
@@ -127,7 +133,7 @@ int main(int argc, char *argv[])
     }
 
     ffrecorder_exit(live->rec );
-//  rtmp_push_exit (live->rtmp);
+    rtmppusher_exit(live->rtmp);
     rtspserver_exit(live->rtsp);
     venc_free(live->venc);
     vdev_free(live->vdev);

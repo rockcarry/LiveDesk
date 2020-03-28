@@ -20,8 +20,8 @@ typedef struct {
     int             running_streams;
     void           *adev;
     void           *vdev;
-    PFN_IOCTL       aioctl;
-    PFN_IOCTL       vioctl;
+    PFN_AVDEV_IOCTL aioctl;
+    PFN_AVDEV_IOCTL vioctl;
 } RTSPSERVER;
 
 int rtsp_servermain(char *name, RTSPSERVER *server, char *pexit);

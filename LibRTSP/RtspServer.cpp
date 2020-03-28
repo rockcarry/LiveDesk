@@ -15,7 +15,7 @@ static void* rtsp_server_thread_proc(void *argv)
     return NULL;
 }
 
-void* rtspserver_init(char *name, void *adev, PFN_IOCTL aioctl, void *vdev, PFN_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config, int frate)
+void* rtspserver_init(char *name, void *adev, PFN_AVDEV_IOCTL aioctl, void *vdev, PFN_AVDEV_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config, int frate)
 {
     RTSPSERVER *server = (RTSPSERVER*)calloc(1, sizeof(RTSPSERVER));
     strncpy(server->name, name, sizeof(server->name));
