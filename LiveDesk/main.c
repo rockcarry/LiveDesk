@@ -127,8 +127,10 @@ int main(int argc, char *argv[])
             printf("available commmand:\n");
             printf("- help: show this mesage.\n");
             printf("- quit: quit this program.\n");
-            printf("- mp4_start: start recording screen to mp4 files.\n");
-            printf("- mp4_pause: pause recording screen to mp4 files.\n\n");
+            printf("- mp4_start : start recording screen to mp4 files.\n");
+            printf("- mp4_pause : pause recording screen to mp4 files.\n");
+            printf("- rtmp_start: start rtmp push.\n");
+            printf("- rtmp_pause: pause rtmp push.\n\n");
         }
     }
 
