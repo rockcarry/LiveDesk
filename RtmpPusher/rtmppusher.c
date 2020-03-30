@@ -40,7 +40,7 @@ static void* rtmppush_thread_proc(void *argv)
             continue;
         }
 
-        readsize = pusher->aioctl(pusher->aenc, AENC_CMD_READ, buf, sizeof(buf), &framesize);
+        readsize = pusher->aioctl(pusher->aenc, AENC_CMD_READ, buf, pusher->aenctype ? sizeof(buf) : 160, &framesize);
         if (readsize > 0) {
             if (pusher->aenctype) {
                 rtmp_push_aac (pusher->rtmp, buf, readsize);
