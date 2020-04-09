@@ -8,7 +8,7 @@
 #include "x264.h"
 #include "log.h"
 
-#define ENC_BUF_SIZE  (1024 * 1024)
+#define ENC_BUF_SIZE  (2 * 1024 * 1024)
 typedef struct {
     void    *vdev;
     x264_t  *x264;
@@ -104,7 +104,8 @@ void* venc_init(void *vdev, int frate, int w, int h, int bitrate)
     param.i_height         = h;
     param.i_fps_num        = frate;
     param.i_fps_den        = 1;
-    param.i_threads        = X264_THREADS_AUTO;
+    param.i_slice_count_max= 1;
+    param.i_threads        = 1;
     param.i_keyint_min     = frate * 2;
     param.i_keyint_max     = frate * 5;
     param.rc.i_bitrate     = bitrate;

@@ -35,12 +35,12 @@ typedef struct {
     uint32_t  status;
     pthread_t pthread;
     uint8_t   aaccfg[2];
+    uint8_t   buffer[2 * 1024 * 1024];
 } RECORDER;
 
 static void* record_thread_proc(void *argv)
 {
     RECORDER *recorder = (RECORDER*)argv;
-    uint8_t   buf[512*1024];
     char      filepath[256] = "";
     void     *mp4muxer      = NULL;
     int       framesize, readsize;
@@ -61,14 +61,14 @@ static void* record_thread_proc(void *argv)
             recorder->starttick = get_tick_count();
         }
 
-        readsize = aenc_ioctl(recorder->aenc, AENC_CMD_READ, buf, sizeof(buf), &framesize);
+        readsize = aenc_ioctl(recorder->aenc, AENC_CMD_READ, recorder->buffer, sizeof(recorder->buffer), &framesize);
         if (readsize > 0) {
-            mp4muxer_audio(mp4muxer, buf, readsize, 0);
+            mp4muxer_audio(mp4muxer, recorder->buffer, readsize, 0);
         }
 
-        readsize = venc_ioctl(recorder->venc, VENC_CMD_READ, buf, sizeof(buf), &framesize);
+        readsize = venc_ioctl(recorder->venc, VENC_CMD_READ, recorder->buffer, sizeof(recorder->buffer), &framesize);
         if (readsize > 0) {
-            mp4muxer_video(mp4muxer, buf, readsize, 0);
+            mp4muxer_video(mp4muxer, recorder->buffer, readsize, 0);
         }
 
         if ((int)(get_tick_count() - recorder->starttick) > recorder->duration) {
