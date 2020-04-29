@@ -50,7 +50,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
     pthread_mutex_lock(&enc->omutex);
-    nwrite = len[0] < (int)sizeof(enc->obuff) - enc->osize ? len[0] : sizeof(enc->obuff) - enc->osize;
+    nwrite = MIN(len[0], (int)sizeof(enc->obuff) - enc->osize);
     for (i=0; i<(int)(nwrite/sizeof(int16_t)); i++) {
         enc->obuff[enc->otail] = pcm2alaw(((int16_t*)buf[0])[i]);
         if (++enc->otail == sizeof(enc->obuff)) enc->otail = 0;
@@ -79,7 +79,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize)
     pthread_mutex_lock(&enc->omutex);
     while (enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
-        readsize   = len < enc->osize ? len : enc->osize;
+        readsize   = MIN(len, enc->osize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->osize-= readsize;
     }

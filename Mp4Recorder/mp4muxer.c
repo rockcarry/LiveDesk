@@ -972,7 +972,7 @@ void mp4muxer_spspps(void *ctx, uint8_t *spsbuf, int spslen, uint8_t *ppsbuf, in
     MP4FILE *mp4 = (MP4FILE*)ctx;
     if (!ctx) return;
     if (spsbuf && spslen) {
-        mp4->avcc_sps_len = (uint16_t)(spslen < sizeof(mp4->avcc_sps_data) ? spslen : sizeof(mp4->avcc_sps_data));
+        mp4->avcc_sps_len = (uint16_t)(MIN(spslen, sizeof(mp4->avcc_sps_data)));
         memcpy(mp4->avcc_sps_data, spsbuf, mp4->avcc_sps_len);
         mp4->avcc_sps_len = (uint16_t)(htonl(mp4->avcc_sps_len) >> 16);
         mp4->avcc_avc_profile    = mp4->avcc_sps_data[1];

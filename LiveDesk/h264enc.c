@@ -179,7 +179,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize)
     if (enc->osize > 0) {
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
         enc->osize-= sizeof(framesize);
-        readsize   = len < framesize ? len : framesize;
+        readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
         enc->osize-= framesize;

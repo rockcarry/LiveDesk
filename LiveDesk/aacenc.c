@@ -99,7 +99,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     AACENC *enc = (AACENC*)ctxt;
     if (!ctxt) return;
     pthread_mutex_lock(&enc->imutex);
-    nwrite = len[0] < (int)sizeof(enc->ibuff) - enc->isize ? len[0] : sizeof(enc->ibuff) - enc->isize;
+    nwrite = MIN(len[0], (int)sizeof(enc->ibuff) - enc->isize);
     enc->itail = ringbuf_write(enc->ibuff, sizeof(enc->ibuff), enc->itail, buf[0], nwrite);
     enc->isize+= nwrite;
     pthread_cond_signal(&enc->icond);
@@ -123,7 +123,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize)
     if (enc->osize > 0) {
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
         enc->osize-= sizeof(framesize);
-        readsize   = len < framesize ? len : framesize;
+        readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
         enc->osize-= framesize;
