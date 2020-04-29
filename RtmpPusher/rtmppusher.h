@@ -1,9 +1,9 @@
 #ifndef __RTMPPUSHER_H__
 #define __RTMPPUSHER_H__
 
-#include "aenc.h"
+#include "codec.h"
 
-void* rtmppusher_init (char *url, int aenctype, unsigned char *aaccfg, void *aenc, PFN_AVDEV_IOCTL aioctl, void *venc, PFN_AVDEV_IOCTL vioctl);
+void* rtmppusher_init (char *url, void *adev, void *vdev, CODEC *aenc, CODEC *venc);
 void  rtmppusher_exit (void *ctxt);
 void  rtmppusher_start(void *ctxt, int start);
 

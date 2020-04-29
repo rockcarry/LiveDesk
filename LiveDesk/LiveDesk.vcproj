@@ -183,11 +183,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\aacenc.c"
+				>
+			</File>
+			<File
 				RelativePath=".\adev.c"
 				>
 			</File>
 			<File
-				RelativePath=".\aenc.c"
+				RelativePath=".\alawenc.c"
+				>
+			</File>
+			<File
+				RelativePath=".\h264enc.c"
 				>
 			</File>
 			<File
@@ -206,10 +214,6 @@
 				RelativePath=".\vdev.c"
 				>
 			</File>
-			<File
-				RelativePath=".\venc.c"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -221,7 +225,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\aenc.h"
+				RelativePath=".\codec.h"
 				>
 			</File>
 			<File
@@ -238,10 +242,6 @@
 			</File>
 			<File
 				RelativePath=".\vdev.h"
-				>
-			</File>
-			<File
-				RelativePath=".\venc.h"
 				>
 			</File>
 		</Filter>

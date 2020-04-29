@@ -1,17 +1,19 @@
 #ifndef __VDEV_H__
 #define __VDEV_H__
 
-void* vdev_init(int frate, int w, int h);
-void  vdev_free(void *ctxt);
+#include "codec.h"
 
-enum {
-    VDEV_CMD_READ = 0,
-    VDEV_CMD_START,
-    VDEV_CMD_STOP,
-    VDEV_CMD_RESET_BUFFER,
-    VDEV_CMD_LOCK = 0x1000,
-    VDEV_CMD_UNLOCK,
-};
-int vdev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void* vdev_init (int frate, int w, int h);
+void  vdev_free (void *ctxt);
+void  vdev_start(void *ctxt, int start);
+void  vdev_set_callback(void *ctxt, PFN_CODEC_CALLBACK callback, void *codec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

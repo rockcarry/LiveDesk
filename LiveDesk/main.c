@@ -5,9 +5,8 @@
 #include <pthread.h>
 #include "stdafx.h"
 #include "adev.h"
-#include "aenc.h"
 #include "vdev.h"
-#include "venc.h"
+#include "codec.h"
 #include "rtspserver.h"
 #include "rtmppusher.h"
 #include "recorder.h"
@@ -18,15 +17,15 @@
 #endif
 
 typedef struct {
-    void *adev;
-    void *aenc;
-    void *vdev;
-    void *venc;
-    void *rtsp;
-    void *rtmp;
-    void *rec;
+    void  *adev;
+    void  *vdev;
+    CODEC *aenc;
+    CODEC *venc;
+    void  *rtsp;
+    void  *rtmp;
+    void  *rec;
     #define TS_EXIT  (1 << 0)
-    int  status;
+    int   status;
 } LIVEDESK;
 
 int main(int argc, char *argv[])
@@ -41,7 +40,6 @@ int main(int argc, char *argv[])
     int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4
     int       duration = 60000;
     char      recpath[256] = "livedesk";
-    uint8_t  *aacinfo  = NULL;
 
     for (i=1; i<argc; i++) {
         if (strcmp(argv[i], "-aac") == 0) {
@@ -93,15 +91,17 @@ int main(int argc, char *argv[])
     printf("\n\n");
 
     log_init("DEBUGER");
-    live->adev = adev_init(channels, samplerate, !aenctype, aenctype ? 16*1024 : 960);
-    live->aenc = aenc_init(live->adev, channels, samplerate, abitrate, &aacinfo);
+    live->adev = adev_init(channels, samplerate);
     live->vdev = vdev_init(framerate, vwidth, vheight);
-    live->venc = venc_init(live->vdev, framerate, vwidth, vheight, vbitrate);
+    live->aenc = aenctype ? aacenc_init(channels, samplerate, abitrate) : alawenc_init();
+    live->venc = h264enc_init(framerate, vwidth, vheight, vbitrate);
+    adev_set_callback(live->adev, live->aenc->write, live->aenc);
+    vdev_set_callback(live->vdev, live->venc->write, live->venc);
 
     switch (rectype) {
-    case 0: live->rtsp = rtspserver_init(recpath, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl, aenctype, venctype, aacinfo, framerate); break;
-    case 1: live->rtmp = rtmppusher_init(recpath, aenctype, aacinfo, aenctype ? live->aenc : live->adev, aenctype ? aenc_ioctl : adev_ioctl, live->venc, venc_ioctl); break;
-    case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, aacinfo, live->aenc, live->venc); break;
+    case 0: live->rtsp = rtspserver_init(recpath, live->adev, live->vdev, live->aenc, live->venc, framerate); break;
+    case 1: live->rtmp = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     printf("\n\ntype help for more infomation and command.\n\n");
@@ -137,10 +137,10 @@ int main(int argc, char *argv[])
     ffrecorder_exit(live->rec );
     rtmppusher_exit(live->rtmp);
     rtspserver_exit(live->rtsp);
-    venc_free(live->venc);
-    vdev_free(live->vdev);
-    aenc_free(live->aenc);
+    codec_uninit(live->aenc);
+    codec_uninit(live->venc);
     adev_free(live->adev);
+    vdev_free(live->vdev);
 
     log_done();
     return 0;

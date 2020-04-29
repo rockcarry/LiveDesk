@@ -73,9 +73,10 @@ int rtsp_servermain(char *name, RTSPSERVER *server, char *pexit) {
   {
     char const* streamName = server->name;
     ServerMediaSession* sms= ServerMediaSession::createNew(*env, streamName, streamName, descriptionString);
-    switch (server->audio_enctype) {
-    case 0: sms->addSubsession(WAVAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource)); break;
-    case 1: sms->addSubsession(AACAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource)); break;
+    if (strcmp(server->aenc->name, "aacenc") == 0) {
+        sms->addSubsession(AACAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
+    } else if (strcmp(server->aenc->name, "alawenc") == 0) {
+        sms->addSubsession(WAVAudioLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
     }
     sms->addSubsession(H26XVideoLiveServerMediaSubsession::createNew(*env, server, reuseFirstSource));
     rtspServer->addServerMediaSession(sms);

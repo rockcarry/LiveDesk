@@ -101,28 +101,34 @@ char const* H26XVideoLiveServerMediaSubsession::getAuxSDPLine(RTPSink* rtpSink, 
 }
 
 FramedSource* H26XVideoLiveServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  mServer->aioctl(mServer->adev, AENC_CMD_START, NULL, 0, NULL);
-  mServer->vioctl(mServer->vdev, AENC_CMD_START, NULL, 0, NULL);
-  mServer->aioctl(mServer->adev, AENC_CMD_RESET_BUFFER, NULL, 0, NULL);
-  mServer->vioctl(mServer->vdev, VENC_CMD_RESET_BUFFER, NULL, 0, NULL);
+  codec_reset(mServer->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+  codec_reset(mServer->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+  codec_start(mServer->aenc, 1);
+  codec_start(mServer->venc, 1);
+  adev_start (mServer->adev, 1);
+  vdev_start (mServer->vdev, 1);
 
   // Create the video source:
   H26XLiveFramedSource* source = H26XLiveFramedSource::createNew(envir(), mServer);
   if (source == NULL) return NULL;
 
   // Create a framer for the Video Elementary Stream:
-  if (mServer->video_enctype) {
+  if (strcmp(mServer->venc->name, "h264enc") == 0) {
+    return H264VideoStreamFramer::createNew(envir(), source);
+  } else if (strcmp(mServer->venc->name, "h265enc") == 0) {
     return H265VideoStreamFramer::createNew(envir(), source);
   } else {
-    return H264VideoStreamFramer::createNew(envir(), source);
+    return NULL;
   }
 }
 
 RTPSink* H26XVideoLiveServerMediaSubsession::createNewRTPSink(Groupsock* rtpGroupsock, unsigned char rtpPayloadTypeIfDynamic, FramedSource* /*inputSource*/) {
-  if (mServer->video_enctype) {
+  if (strcmp(mServer->venc->name, "h264enc") == 0) {
+    return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
+  } else if (strcmp(mServer->venc->name, "h265enc") == 0) {
     return H265VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
   } else {
-    return H264VideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
+    return NULL;
   }
 }
 
@@ -132,7 +138,7 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 			ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
             void* serverRequestAlternativeByteHandlerClientData) {
   mServer->running_streams++;
-  mServer->vioctl(mServer->vdev, VENC_CMD_REQUEST_IDR , NULL, 0, NULL);
+  codec_reset(mServer->venc, CODEC_RESET_REQUEST_IDR);
   OnDemandServerMediaSubsession::startStream(clientSessionId, streamToken, rtcpRRHandler, rtcpRRHandlerClientData, rtpSeqNum, rtpTimestamp,
     serverRequestAlternativeByteHandler, serverRequestAlternativeByteHandlerClientData);
 }
@@ -141,8 +147,10 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 void H26XVideoLiveServerMediaSubsession::deleteStream(unsigned clientSessionId, void*& streamToken) {
   mServer->running_streams--;
   if (mServer->running_streams == 0) {
-    mServer->aioctl(mServer->adev, AENC_CMD_STOP, NULL, 0, NULL);
-    mServer->vioctl(mServer->vdev, VENC_CMD_STOP, NULL, 0, NULL);
+    codec_start(mServer->aenc, 0);
+    codec_start(mServer->venc, 0);
+    adev_start (mServer->adev, 0);
+    vdev_start (mServer->vdev, 0);
   }
   OnDemandServerMediaSubsession::deleteStream(clientSessionId, streamToken);
 }

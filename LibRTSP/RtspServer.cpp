@@ -15,24 +15,15 @@ static void* rtsp_server_thread_proc(void *argv)
     return NULL;
 }
 
-void* rtspserver_init(char *name, void *adev, PFN_AVDEV_IOCTL aioctl, void *vdev, PFN_AVDEV_IOCTL vioctl, int aenc_type, int venc_type, uint8_t *aac_config, int frate)
+void* rtspserver_init(char *name, void *adev, void *vdev, CODEC *aenc, CODEC *venc, int frate)
 {
     RTSPSERVER *server = (RTSPSERVER*)calloc(1, sizeof(RTSPSERVER));
     strncpy(server->name, name, sizeof(server->name));
-    server->audio_enctype = aenc_type;
-    server->video_enctype = venc_type;
     server->adev  = adev;
-    server->aioctl= aioctl;
+    server->aenc  = aenc;
     server->vdev  = vdev;
-    server->vioctl= vioctl;
+    server->venc  = venc;
     server->frate = frate;
-
-    if (aac_config) {
-        server->aac_config[0] = aac_config[0];
-        server->aac_config[1] = aac_config[1];
-    }
-
-    // create server thread
     pthread_create(&server->pthread, NULL, rtsp_server_thread_proc, server);
     return server;
 }
@@ -42,8 +33,8 @@ void rtspserver_exit(void *ctx)
     RTSPSERVER *server = (RTSPSERVER*)ctx;
     if (!ctx) return;
 
-    server->aioctl(server->adev, AENC_CMD_STOP, NULL, 0, NULL);
-    server->vioctl(server->vdev, VENC_CMD_STOP, NULL, 0, NULL);
+    adev_start(server->adev, 0);
+    vdev_start(server->vdev, 0);
     server->bexit = 1;
     if (server->pthread) pthread_join(server->pthread, NULL);
     free(ctx);

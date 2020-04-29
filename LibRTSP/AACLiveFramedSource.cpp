@@ -50,7 +50,7 @@ AACLiveFramedSource::~AACLiveFramedSource() {
 }
 
 void AACLiveFramedSource::doGetNextFrame() {
-    int readsize = mServer->aioctl(mServer->adev, AENC_CMD_READ, fTo, fMaxSize, (int*)&fFrameSize);
+    int readsize = codec_read(mServer->aenc, fTo, fMaxSize, (int*)&fFrameSize);
     fNumTruncatedBytes = fFrameSize - readsize;
     if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
     fDurationInMicroseconds = fFrameSize ? fuSecsPerFrame : 0;

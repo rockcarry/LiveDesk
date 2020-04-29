@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include "aenc.h"
-#include "venc.h"
+#include "adev.h"
+#include "vdev.h"
 #include "mp4muxer.h"
 #include "recorder.h"
 
@@ -27,14 +27,15 @@ typedef struct {
     uint32_t  starttick;
     int       recfilecnt;
 
-    void     *aenc;
-    void     *venc;
+    void     *adev;
+    void     *vdev;
+    CODEC    *aenc;
+    CODEC    *venc;
 
     #define TS_EXIT  (1 << 0)
     #define TS_START (1 << 1)
     uint32_t  status;
     pthread_t pthread;
-    uint8_t   aaccfg[2];
     uint8_t   buffer[2 * 1024 * 1024];
 } RECORDER;
 
@@ -57,23 +58,23 @@ static void* record_thread_proc(void *argv)
 
         if (!mp4muxer) {
             snprintf(filepath, sizeof(filepath), "%s-%03d.mp4", recorder->filename, ++recorder->recfilecnt);
-            mp4muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, recorder->channels, recorder->samprate, 16, 1024, recorder->aaccfg);
+            mp4muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->info);
             recorder->starttick = get_tick_count();
         }
 
-        readsize = aenc_ioctl(recorder->aenc, AENC_CMD_READ, recorder->buffer, sizeof(recorder->buffer), &framesize);
+        readsize = codec_read(recorder->aenc, recorder->buffer, sizeof(recorder->buffer), &framesize);
         if (readsize > 0) {
             mp4muxer_audio(mp4muxer, recorder->buffer, readsize, 0);
         }
 
-        readsize = venc_ioctl(recorder->venc, VENC_CMD_READ, recorder->buffer, sizeof(recorder->buffer), &framesize);
+        readsize = codec_read(recorder->venc, recorder->buffer, sizeof(recorder->buffer), &framesize);
         if (readsize > 0) {
             mp4muxer_video(mp4muxer, recorder->buffer, readsize, 0);
         }
 
         if ((int)(get_tick_count() - recorder->starttick) > recorder->duration) {
             recorder->starttick += recorder->duration;
-            venc_ioctl(recorder->venc, VENC_CMD_REQUEST_IDR , NULL, 0, NULL);
+            codec_reset(recorder->venc, CODEC_RESET_REQUEST_IDR);
             mp4muxer_exit(mp4muxer);
             mp4muxer = NULL;
         }
@@ -83,7 +84,7 @@ static void* record_thread_proc(void *argv)
     return NULL;
 }
 
-void* ffrecorder_init(char *name, int duration, int channels, int samprate, int width, int height, int fps, unsigned char *aaccfg, void *aenc, void *venc)
+void* ffrecorder_init(char *name, int duration, int channels, int samprate, int width, int height, int fps, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
 {
     RECORDER *recorder = calloc(1, sizeof(RECORDER));
     if (!recorder) return NULL;
@@ -95,8 +96,8 @@ void* ffrecorder_init(char *name, int duration, int channels, int samprate, int 
     recorder->width    = width;
     recorder->height   = height;
     recorder->fps      = fps;
-    recorder->aaccfg[0]= aaccfg ? aaccfg[0] : 0;
-    recorder->aaccfg[1]= aaccfg ? aaccfg[1] : 0;
+    recorder->adev     = adev;
+    recorder->vdev     = vdev;
     recorder->aenc     = aenc;
     recorder->venc     = venc;
 
@@ -111,8 +112,10 @@ void ffrecorder_exit(void *ctxt)
     RECORDER *recorder = (RECORDER*)ctxt;
     if (!ctxt) return;
 
-    aenc_ioctl(recorder->aenc, AENC_CMD_STOP, NULL, 0, NULL);
-    venc_ioctl(recorder->venc, AENC_CMD_STOP, NULL, 0, NULL);
+    adev_start (recorder->adev, 0);
+    vdev_start (recorder->vdev, 0);
+    codec_start(recorder->aenc, 0);
+    codec_start(recorder->venc, 0);
     recorder->status |= TS_EXIT;
     pthread_join(recorder->pthread, NULL);
     free(recorder);
@@ -124,15 +127,18 @@ void ffrecorder_start(void *ctxt, int start)
     if (!ctxt) return;
     if (start) {
         recorder->status |= TS_START;
-        aenc_ioctl(recorder->aenc, AENC_CMD_RESET_BUFFER, NULL, 0, NULL);
-        venc_ioctl(recorder->venc, VENC_CMD_RESET_BUFFER, NULL, 0, NULL);
-        venc_ioctl(recorder->venc, VENC_CMD_REQUEST_IDR , NULL, 0, NULL);
-        aenc_ioctl(recorder->aenc, AENC_CMD_START, NULL, 0, NULL);
-        venc_ioctl(recorder->venc, VENC_CMD_START, NULL, 0, NULL);
+        codec_reset(recorder->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+        codec_reset(recorder->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+        codec_start(recorder->aenc, 1);
+        codec_start(recorder->venc, 1);
+        adev_start (recorder->adev, 1);
+        vdev_start (recorder->vdev, 1);
     } else {
         recorder->status &=~TS_START;
-        aenc_ioctl(recorder->aenc, AENC_CMD_STOP, NULL, 0, NULL);
-        venc_ioctl(recorder->venc, VENC_CMD_STOP, NULL, 0, NULL);
+        codec_start(recorder->aenc, 0);
+        codec_start(recorder->venc, 0);
+        adev_start (recorder->adev, 0);
+        vdev_start (recorder->vdev, 0);
     }
 }
 

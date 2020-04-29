@@ -1,17 +1,19 @@
 #ifndef __ADEV_H__
 #define __ADEV_H__
 
-void* adev_init(int channels, int samplerate, int isalaw, int bufsize);
-void  adev_free(void *ctxt);
+#include "codec.h"
 
-enum {
-    ADEV_CMD_READ = 0,
-    ADEV_CMD_START,
-    ADEV_CMD_STOP,
-    ADEV_CMD_RESET_BUFFER,
-    ADEV_LOCK_BUFFER = 0x1000,
-    ADEV_UNLOCK_BUFFER,
-};
-int adev_ioctl(void *ctxt, int cmd, void *buf, int bsize, int *fsize);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void* adev_init (int channels, int samplerate);
+void  adev_free (void *ctxt);
+void  adev_start(void *ctxt, int start);
+void  adev_set_callback(void *ctxt, PFN_CODEC_CALLBACK callback, void *codec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

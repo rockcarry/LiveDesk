@@ -2,11 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include "adev.h"
-#include "aenc.h"
-#include "venc.h"
 #include "librtmp.h"
 #include "rtmppusher.h"
+#include "adev.h"
+#include "vdev.h"
 
 #ifdef WIN32
 #include <winsock.h>
@@ -15,24 +14,22 @@
 
 typedef struct {
     void     *rtmp;
-    void     *aenc;
-    void     *venc;
-
-    PFN_AVDEV_IOCTL aioctl;
-    PFN_AVDEV_IOCTL vioctl;
+    void     *adev;
+    void     *vdev;
+    CODEC    *aenc;
+    CODEC    *venc;
 
     #define TS_EXIT  (1 << 0)
     #define TS_START (1 << 1)
     uint32_t  status;
     pthread_t pthread;
-    int       aenctype;
+    uint8_t   buffer[2 * 1024 * 1024];
 } RTMPPUSHER;
 
 static void* rtmppush_thread_proc(void *argv)
 {
     RTMPPUSHER *pusher = (RTMPPUSHER*)argv;
-    uint8_t buf[512*1024];
-    int framesize, readsize;
+    int aenctype = strcmp(pusher->aenc->name, "aacenc") == 0, framesize, readsize;
 
     while (!(pusher->status & TS_EXIT)) {
         if (!(pusher->status & TS_START)) {
@@ -40,24 +37,24 @@ static void* rtmppush_thread_proc(void *argv)
             continue;
         }
 
-        readsize = pusher->aioctl(pusher->aenc, AENC_CMD_READ, buf, pusher->aenctype ? sizeof(buf) : 160, &framesize);
+        readsize = codec_read(pusher->aenc, pusher->buffer, aenctype ? sizeof(pusher->buffer) : 160, &framesize);
         if (readsize > 0) {
-            if (pusher->aenctype) {
-                rtmp_push_aac (pusher->rtmp, buf, readsize);
+            if (aenctype) {
+                rtmp_push_aac (pusher->rtmp, pusher->buffer, readsize);
             } else {
-                rtmp_push_alaw(pusher->rtmp, buf, readsize);
+                rtmp_push_alaw(pusher->rtmp, pusher->buffer, readsize);
             }
         }
 
-        readsize = pusher->vioctl(pusher->venc, VENC_CMD_READ, buf, sizeof(buf), &framesize);
+        readsize = codec_read(pusher->venc, pusher->buffer, sizeof(pusher->buffer), &framesize);
         if (readsize > 0) {
-            rtmp_push_h264(pusher->rtmp, buf, readsize);
+            rtmp_push_h264(pusher->rtmp, pusher->buffer, readsize);
         }
     }
     return NULL;
 }
 
-void* rtmppusher_init(char *url, int aenctype, unsigned char *aaccfg, void *aenc, PFN_AVDEV_IOCTL aioctl, void *venc, PFN_AVDEV_IOCTL vioctl)
+void* rtmppusher_init(char *url, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
 {
     RTMPPUSHER *pusher = calloc(1, sizeof(RTMPPUSHER));
     if (!pusher) return NULL;
@@ -71,12 +68,11 @@ void* rtmppusher_init(char *url, int aenctype, unsigned char *aaccfg, void *aenc
     }
 #endif
 
-    pusher->rtmp     = rtmp_push_init(url, aaccfg);
-    pusher->aenctype = aenctype;
-    pusher->aenc     = aenc;
-    pusher->venc     = venc;
-    pusher->aioctl   = aioctl;
-    pusher->vioctl   = vioctl;
+    pusher->rtmp = rtmp_push_init(url, aenc->info);
+    pusher->adev = adev;
+    pusher->vdev = vdev;
+    pusher->aenc = aenc;
+    pusher->venc = venc;
 
     pthread_create(&pusher->pthread, NULL, rtmppush_thread_proc, pusher);
     rtmppusher_start(pusher, 1);
@@ -103,14 +99,17 @@ void rtmppusher_start(void *ctxt, int start)
     if (!pusher) return;
     if (start) {
         pusher->status |= TS_START;
-        pusher->aioctl(pusher->aenc, AENC_CMD_RESET_BUFFER, NULL, 0, NULL);
-        pusher->vioctl(pusher->venc, VENC_CMD_RESET_BUFFER, NULL, 0, NULL);
-        pusher->vioctl(pusher->venc, VENC_CMD_REQUEST_IDR , NULL, 0, NULL);
-        pusher->aioctl(pusher->aenc, AENC_CMD_START, NULL, 0, NULL);
-        pusher->vioctl(pusher->venc, VENC_CMD_START, NULL, 0, NULL);
+        codec_reset(pusher->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+        codec_reset(pusher->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+        codec_start(pusher->aenc, 1);
+        codec_start(pusher->venc, 1);
+        adev_start (pusher->adev, 1);
+        vdev_start (pusher->vdev, 1);
     } else {
         pusher->status &=~TS_START;
-        pusher->aioctl(pusher->aenc, ADEV_CMD_STOP, NULL, 0, NULL);
-        pusher->vioctl(pusher->venc, VENC_CMD_STOP, NULL, 0, NULL);
+        codec_start(pusher->aenc, 0);
+        codec_start(pusher->venc, 0);
+        adev_start (pusher->adev, 0);
+        vdev_start (pusher->vdev, 0);
     }
 }
