@@ -62,12 +62,12 @@ static void* record_thread_proc(void *argv)
             recorder->starttick = get_tick_count();
         }
 
-        readsize = codec_read(recorder->aenc, recorder->buffer, sizeof(recorder->buffer), &framesize);
+        readsize = codec_read(recorder->aenc, recorder->buffer, sizeof(recorder->buffer), &framesize, 16);
         if (readsize > 0) {
             mp4muxer_audio(mp4muxer, recorder->buffer, readsize, 0);
         }
 
-        readsize = codec_read(recorder->venc, recorder->buffer, sizeof(recorder->buffer), &framesize);
+        readsize = codec_read(recorder->venc, recorder->buffer, sizeof(recorder->buffer), &framesize, 16);
         if (readsize > 0) {
             mp4muxer_video(mp4muxer, recorder->buffer, readsize, 0);
         }

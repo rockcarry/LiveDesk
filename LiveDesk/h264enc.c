@@ -162,7 +162,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize)
+static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     int32_t framesize = 0, readsize = 0, ret = 0;
@@ -175,7 +175,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize)
     ts.tv_nsec %= 1000000000;
 
     pthread_mutex_lock(&enc->omutex);
-    while (enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
+    while (timeout && enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
         enc->osize-= sizeof(framesize);

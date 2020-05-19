@@ -37,7 +37,7 @@ static void* rtmppush_thread_proc(void *argv)
             continue;
         }
 
-        readsize = codec_read(pusher->aenc, pusher->buffer, aenctype ? sizeof(pusher->buffer) : 160, &framesize);
+        readsize = codec_read(pusher->aenc, pusher->buffer, aenctype ? sizeof(pusher->buffer) : 160, &framesize, 16);
         if (readsize > 0) {
             if (aenctype) {
                 rtmp_push_aac (pusher->rtmp, pusher->buffer, readsize);
@@ -46,7 +46,7 @@ static void* rtmppush_thread_proc(void *argv)
             }
         }
 
-        readsize = codec_read(pusher->venc, pusher->buffer, sizeof(pusher->buffer), &framesize);
+        readsize = codec_read(pusher->venc, pusher->buffer, sizeof(pusher->buffer), &framesize, 16);
         if (readsize > 0) {
             rtmp_push_h264(pusher->rtmp, pusher->buffer, readsize);
         }
