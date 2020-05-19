@@ -147,12 +147,12 @@ static void write(void *ctxt, void *buf[8], int len[8])
 
         picsrc.data[0]     = buf[0];
         picsrc.linesize[0] = len[3];
-        picdst.linesize[0] = enc->iw;
-        picdst.linesize[1] = enc->iw / 2;
-        picdst.linesize[2] = enc->iw / 2;
+        picdst.linesize[0] = enc->ow;
+        picdst.linesize[1] = enc->ow / 2;
+        picdst.linesize[2] = enc->ow / 2;
         picdst.data[0] = enc->ibuff[enc->itail];
-        picdst.data[1] = picdst.data[0] + enc->iw * enc->ih * 4 / 4;
-        picdst.data[2] = picdst.data[0] + enc->iw * enc->ih * 5 / 4;
+        picdst.data[1] = picdst.data[0] + enc->ow * enc->oh * 4 / 4;
+        picdst.data[2] = picdst.data[0] + enc->ow * enc->oh * 5 / 4;
 
         sws_scale(enc->sws_context, (const uint8_t * const*)picsrc.data, picsrc.linesize, 0, enc->ih, picdst.data, picdst.linesize);
         if (++enc->itail == YUV_BUF_NUM) enc->itail = 0;
