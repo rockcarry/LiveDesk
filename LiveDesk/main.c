@@ -10,6 +10,8 @@
 #include "rtspserver.h"
 #include "rtmppusher.h"
 #include "recorder.h"
+#include "avkcps.h"
+#include "avkcpc.h"
 #include "log.h"
 
 #ifdef WIN32
@@ -24,6 +26,8 @@ typedef struct {
     void  *rtsp;
     void  *rtmp;
     void  *rec;
+    void  *avkcps;
+    void  *avkcpc;
     #define TS_EXIT  (1 << 0)
     int   status;
 } LIVEDESK;
@@ -39,7 +43,9 @@ int main(int argc, char *argv[])
     int       venctype = 0, framerate= 20, vbitrate = 512000;
     int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4
     int       duration = 60000;
+    int       avkcpport= 8000;
     char      recpath[256] = "livedesk";
+    void     *avkcpc = NULL;
 
     for (i=1; i<argc; i++) {
         if (strcmp(argv[i], "-aac") == 0) {
@@ -64,6 +70,8 @@ int main(int argc, char *argv[])
             rectype = 1; strncpy(recpath, argv[i] + 6, sizeof(recpath));
         } else if (strstr(argv[i], "-mp4=") == argv[i]) {
             rectype = 2; strncpy(recpath, argv[i] + 5, sizeof(recpath));
+        } else if (strstr(argv[i], "-avkcps=") == argv[i]) {
+            rectype = 3; avkcpport = atoi(argv[i] + 8);
         } else if (strstr(argv[i], "-duration=") == argv[i]) {
             duration = atoi(argv[i] + 10);
         }
@@ -76,9 +84,10 @@ int main(int argc, char *argv[])
         samplerate = 8000;
         abitrate   = 64000;
     }
-    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : "mp4");
+    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : rectype == 2 ? "mp4" : rectype == 3 ? "avkcps" : "unknow");
     printf("recpath   : %s\n", recpath);
     printf("duration  : %d\n", duration);
+    printf("avkcpport : %d\n", avkcpport);
     printf("aenctype  : %s\n", aenctype ? "aac" : "alaw");
     printf("channels  : %d\n", channels);
     printf("samplerate: %d\n", samplerate);
@@ -99,9 +108,10 @@ int main(int argc, char *argv[])
     vdev_set_callback(live->vdev, live->venc->write, live->venc);
 
     switch (rectype) {
-    case 0: live->rtsp = rtspserver_init(recpath, live->adev, live->vdev, live->aenc, live->venc, framerate); break;
-    case 1: live->rtmp = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 2: live->rec  = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 0: live->rtsp  = rtspserver_init(recpath, live->adev, live->vdev, live->aenc, live->venc, framerate); break;
+    case 1: live->rtmp  = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 2: live->rec   = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 3: live->avkcps= avkcps_init(avkcpport, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     printf("\n\ntype help for more infomation and command.\n\n");
@@ -122,6 +132,8 @@ int main(int argc, char *argv[])
         } else if (rectype == 1 && stricmp(cmd, "rtmp_pause") == 0) {
             rtmppusher_start(live->rtmp, 0);
             printf("rtmp push paused !\n");
+        } else if (rectype == 3 && stricmp(cmd, "avkcpc_start") == 0) {
+            if (live->avkcpc == NULL) live->avkcps = avkcpc_init("127.0.0.1", avkcpport);
         } else if (stricmp(cmd, "help") == 0) {
             printf("\nlivedesk v1.0.0\n\n");
             printf("available commmand:\n");
@@ -134,6 +146,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    avkcps_exit(live->avkcpc);
+    avkcps_exit(live->avkcps);
     ffrecorder_exit(live->rec );
     rtmppusher_exit(live->rtmp);
     rtspserver_exit(live->rtsp);
