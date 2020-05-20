@@ -52,7 +52,8 @@ static void* avkcpc_thread_proc(void *argv)
     AVKCPC  *avkcpc = (AVKCPC*)argv;
     struct   sockaddr_in fromaddr;
     uint8_t  buffer[1500];
-    uint32_t tickcur = 0, tickheartbeat = 0;
+    uint32_t tickcur = 0, tickheartbeat = 0, tickstart = 0;
+    uint64_t recvncur = 0, recvntotal = 0;
     int      addrlen = sizeof(fromaddr), ret;
     unsigned long opt;
 
@@ -79,8 +80,8 @@ static void* avkcpc_thread_proc(void *argv)
     }
 
     ikcp_setoutput(avkcpc->ikcp, udp_output);
-    ikcp_nodelay(avkcpc->ikcp, 2, 10, 2, 0);
-    ikcp_wndsize(avkcpc->ikcp, 128, 128);
+    ikcp_nodelay(avkcpc->ikcp, 2, 10, 2, 1);
+    ikcp_wndsize(avkcpc->ikcp, 256, 1024);
     avkcpc->ikcp->interval = 1;
     avkcpc->ikcp->rx_minrto = 5;
     avkcpc->ikcp->fastresend = 1;
@@ -89,9 +90,11 @@ static void* avkcpc_thread_proc(void *argv)
     while (!(avkcpc->status & TS_EXIT)) {
         if (!(avkcpc->status & TS_START)) { usleep(100*1000); continue; }
 
-        if (get_tick_count() >= tickheartbeat + 2000) {
+        if (get_tick_count() >= tickheartbeat + 1000) {
             tickheartbeat = get_tick_count();
             ikcp_send(avkcpc->ikcp, "hb", 3);
+            printf("recvncur = %u\n", recvncur); recvncur = 0;
+            printf("recvnavg = %u\n", recvntotal * 1000 / (get_tick_count() - tickstart));
         }
 
         do {
@@ -114,6 +117,9 @@ static void* avkcpc_thread_proc(void *argv)
                     avkcpc->head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), head, NULL, (typelen >> 8));
                     avkcpc->size-= sizeof(typelen) + (typelen >> 8);
 //                  printf("get %c frame, size: %d\n", (typelen & 0xFF), (typelen >> 8));
+                    recvncur   += typelen >> 8;
+                    recvntotal += typelen >> 8;
+                    if (tickstart == 0) tickstart = get_tick_count();
                 }
             }
         };

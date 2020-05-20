@@ -100,8 +100,8 @@ static void* avkcps_thread_proc(void *argv)
     }
 
     ikcp_setoutput(avkcps->ikcp, udp_output);
-    ikcp_nodelay(avkcps->ikcp, 2, 10, 2, 0);
-    ikcp_wndsize(avkcps->ikcp, 128, 128);
+    ikcp_nodelay(avkcps->ikcp, 2, 10, 2, 1);
+    ikcp_wndsize(avkcps->ikcp, 1024, 256);
     avkcps->ikcp->interval = 1;
     avkcps->ikcp->rx_minrto = 5;
     avkcps->ikcp->fastresend = 1;
