@@ -97,32 +97,29 @@ static void* avkcpc_thread_proc(void *argv)
             printf("recvnavg = %u\n", recvntotal * 1000 / (get_tick_count() - tickstart));
         }
 
-        do {
-            ret = recvfrom(avkcpc->client_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&fromaddr, &addrlen);
-            if (ret > 0) ikcp_input(avkcpc->ikcp, buffer, ret);
-        } while (ret > 0);
+        while (1) {
+            if ((ret = recvfrom(avkcpc->client_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&fromaddr, &addrlen)) <= 0) break;
+            ikcp_input(avkcpc->ikcp, buffer, ret);
+        }
 
         while (1) {
-            if ((ret = ikcp_recv(avkcpc->ikcp, buffer, sizeof(buffer))) <= 0) break;
-            if (ret <= (int)sizeof(avkcpc->buff) - avkcpc->size) {
-                avkcpc->tail = ringbuf_write(avkcpc->buff, sizeof(avkcpc->buff), avkcpc->tail, buffer, ret);
-                avkcpc->size+= ret;
-            } else {
-                printf("drop data ! %d\n", ret);
-            }
-            if (avkcpc->size > 4) {
-                uint32_t typelen, head;
-                head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), avkcpc->head, (uint8_t*)&typelen, sizeof(typelen));
-                if ((int)((typelen >> 8) + sizeof(typelen)) <= avkcpc->size) {
-                    avkcpc->head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), head, NULL, (typelen >> 8));
-                    avkcpc->size-= sizeof(typelen) + (typelen >> 8);
-//                  printf("get %c frame, size: %d\n", (typelen & 0xFF), (typelen >> 8));
-                    recvncur   += typelen >> 8;
-                    recvntotal += typelen >> 8;
-                    if (tickstart == 0) tickstart = get_tick_count();
-                }
-            }
-        };
+            int n = sizeof(avkcpc->buff) - avkcpc->size < sizeof(buffer) ? sizeof(avkcpc->buff) - avkcpc->size : sizeof(buffer);
+            if (n == 0 || (ret = ikcp_recv(avkcpc->ikcp, buffer, n)) <= 0) break;
+            avkcpc->tail = ringbuf_write(avkcpc->buff, sizeof(avkcpc->buff), avkcpc->tail, buffer, ret);
+            avkcpc->size+= ret;
+        }
+
+        while (avkcpc->size > sizeof(uint32_t)) {
+            uint32_t typelen, head;
+            head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), avkcpc->head, (uint8_t*)&typelen, sizeof(typelen));
+            if ((int)((typelen >> 8) + sizeof(typelen)) > avkcpc->size) break;
+            avkcpc->head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), head, NULL, (typelen >> 8));
+            avkcpc->size-= sizeof(typelen) + (typelen >> 8);
+            printf("get %c frame, size: %d\n", (typelen & 0xFF), (typelen >> 8));
+            recvncur   += typelen >> 8;
+            recvntotal += typelen >> 8;
+            if (tickstart == 0) tickstart = get_tick_count();
+        }
 
         avkcpc_ikcp_update(avkcpc);
         usleep(1*1000);
