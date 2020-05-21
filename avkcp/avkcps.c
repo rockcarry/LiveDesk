@@ -136,7 +136,7 @@ static void* avkcps_thread_proc(void *argv)
                 vdev_start (avkcps->vdev, 1);
                 tickheartbeat = get_tick_count();
                 printf("===ck=== client connected !\n");
-                ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr) + 1);
+                ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr+sizeof(uint32_t)) + 1);
             }
             if (memcmp(&avkcps->client_addr, &fromaddr, sizeof(avkcps->client_addr)) == 0) ikcp_input(avkcps->ikcp, buffer, ret);
         }
@@ -189,8 +189,9 @@ void* avkcps_init(int port, int channels, int samprate, int width, int height, i
     avkcps->vdev = vdev;
     avkcps->aenc = aenc;
     avkcps->venc = venc;
-    snprintf(avkcps->avinfostr, sizeof(avkcps->avinfostr), "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d;",
-        aenc->name, channels, samprate, venc->name, width, height, frate);
+    snprintf(avkcps->avinfostr+sizeof(uint32_t), sizeof(avkcps->avinfostr)-sizeof(uint32_t),
+        "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d;",
+         aenc->name, channels, samprate, venc->name, width, height, frate);
 
     // create server thread
     pthread_create(&avkcps->pthread, NULL, avkcps_thread_proc, avkcps);
