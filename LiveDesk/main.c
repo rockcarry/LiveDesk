@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
             rtmppusher_start(live->rtmp, 0);
             printf("rtmp push paused !\n");
         } else if (rectype == 3 && stricmp(cmd, "avkcpc_start") == 0) {
-            if (live->avkcpc == NULL) live->avkcpc = avkcpc_init("127.0.0.1", avkcpport);
+            if (live->avkcpc == NULL) live->avkcpc = avkcpc_init("127.0.0.1", avkcpport, NULL, NULL);
         } else if (stricmp(cmd, "help") == 0) {
             printf("\nlivedesk v1.0.0\n\n");
             printf("available commmand:\n");

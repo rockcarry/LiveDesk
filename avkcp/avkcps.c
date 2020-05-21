@@ -69,9 +69,9 @@ static void* avkcps_thread_proc(void *argv)
 {
     AVKCPS  *avkcps = (AVKCPS*)argv;
     struct   sockaddr_in fromaddr;
-    uint8_t  buffer[1500];
-    uint32_t tickcur = 0, tickheartbeat = 0;
     int      addrlen = sizeof(fromaddr), ret;
+    uint32_t tickheartbeat = 0;
+    uint8_t  buffer[1500];
     unsigned long opt;
 
 #ifdef WIN32
@@ -95,22 +95,21 @@ static void* avkcps_thread_proc(void *argv)
     opt = 1; ioctlsocket(avkcps->server_fd, FIONBIO, &opt); // setup non-block io mode
     opt = 1; setsockopt(avkcps->server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(int));
 
-    avkcps->ikcp = ikcp_create(AVKCP_CONV, avkcps);
-    if (!avkcps->ikcp) {
-        printf("failed to create ikcp !\n");
-        goto _exit;
-    }
-
-    ikcp_setoutput(avkcps->ikcp, udp_output);
-    ikcp_nodelay(avkcps->ikcp, 2, 10, 2, 1);
-    ikcp_wndsize(avkcps->ikcp, 1024, 256);
-    avkcps->ikcp->interval = 1;
-    avkcps->ikcp->rx_minrto = 5;
-    avkcps->ikcp->fastresend = 1;
-    avkcps->ikcp->stream = 1;
-
     while (!(avkcps->status & TS_EXIT)) {
         if (!(avkcps->status & TS_START)) { usleep(100*1000); continue; }
+
+        if (avkcps->ikcp == NULL) {
+            avkcps->ikcp = ikcp_create(AVKCP_CONV, avkcps);
+            if (avkcps->ikcp != NULL) {
+                ikcp_setoutput(avkcps->ikcp, udp_output);
+                ikcp_nodelay(avkcps->ikcp, 2, 10, 2, 1);
+                ikcp_wndsize(avkcps->ikcp, 1024, 256);
+                avkcps->ikcp->interval = 1;
+                avkcps->ikcp->rx_minrto = 5;
+                avkcps->ikcp->fastresend = 1;
+                avkcps->ikcp->stream = 1;
+            } else { usleep(100*1000); continue; }
+        }
 
         if (avkcps->client_connected && ikcp_waitsnd(avkcps->ikcp) < 2000) {
             int readsize, framesize;
@@ -156,11 +155,12 @@ static void* avkcps_thread_proc(void *argv)
                     adev_start (avkcps->adev, 0);
                     vdev_start (avkcps->vdev, 0);
                     memset(&avkcps->client_addr, 0, sizeof(avkcps->client_addr));
+                    ikcp_release(avkcps->ikcp); avkcps->ikcp = NULL;
                 }
             }
         }
 
-        avkcps_ikcp_update(avkcps);
+        if (avkcps->ikcp) avkcps_ikcp_update(avkcps);
         usleep(1*1000);
     }
 

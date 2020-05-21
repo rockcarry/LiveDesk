@@ -30,6 +30,8 @@ typedef struct {
     int       head;
     int       tail;
     int       size;
+    PFN_AVKCPC_CB callback;
+    void         *cbctxt;
 } AVKCPC;
 
 static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
@@ -51,10 +53,10 @@ static void* avkcpc_thread_proc(void *argv)
 {
     AVKCPC  *avkcpc = (AVKCPC*)argv;
     struct   sockaddr_in fromaddr;
-    uint8_t  buffer[1500];
-    uint32_t tickcur = 0, tickheartbeat = 0, tickstart = 0;
-    uint64_t recvncur = 0, recvntotal = 0;
     int      addrlen = sizeof(fromaddr), ret;
+    uint32_t tickheartbeat = 0, tickstart = 0, tickgetframe = 0;
+    uint64_t recvncur = 0, recvntotal = 0;
+    uint8_t  buffer[1500];
     unsigned long opt;
 
 #ifdef WIN32
@@ -73,22 +75,21 @@ static void* avkcpc_thread_proc(void *argv)
     opt = 1;        ioctlsocket(avkcpc->client_fd, FIONBIO, &opt); // setup non-block io mode
     opt = 256*1024; setsockopt(avkcpc->client_fd, SOL_SOCKET, SO_RCVBUF, (char*)&opt, sizeof(int));
 
-    avkcpc->ikcp = ikcp_create(AVKCP_CONV, avkcpc);
-    if (!avkcpc->ikcp) {
-        printf("failed to create ikcp !\n");
-        goto _exit;
-    }
-
-    ikcp_setoutput(avkcpc->ikcp, udp_output);
-    ikcp_nodelay(avkcpc->ikcp, 2, 10, 2, 1);
-    ikcp_wndsize(avkcpc->ikcp, 256, 1024);
-    avkcpc->ikcp->interval = 1;
-    avkcpc->ikcp->rx_minrto = 5;
-    avkcpc->ikcp->fastresend = 1;
-    avkcpc->ikcp->stream = 1;
-
     while (!(avkcpc->status & TS_EXIT)) {
         if (!(avkcpc->status & TS_START)) { usleep(100*1000); continue; }
+
+        if (avkcpc->ikcp == NULL) {
+            avkcpc->ikcp = ikcp_create(AVKCP_CONV, avkcpc);
+            if (avkcpc->ikcp) {
+                ikcp_setoutput(avkcpc->ikcp, udp_output);
+                ikcp_nodelay(avkcpc->ikcp, 2, 10, 2, 1);
+                ikcp_wndsize(avkcpc->ikcp, 256, 1024);
+                avkcpc->ikcp->interval = 1;
+                avkcpc->ikcp->rx_minrto = 5;
+                avkcpc->ikcp->fastresend = 1;
+                avkcpc->ikcp->stream = 1;
+            } else { usleep(100*1000); continue; }
+        }
 
         if (get_tick_count() >= tickheartbeat + 1000) {
             tickheartbeat = get_tick_count();
@@ -115,13 +116,23 @@ static void* avkcpc_thread_proc(void *argv)
             if ((int)((typelen >> 8) + sizeof(typelen)) > avkcpc->size) break;
             avkcpc->head = ringbuf_read(avkcpc->buff, sizeof(avkcpc->buff), head, NULL, (typelen >> 8));
             avkcpc->size-= sizeof(typelen) + (typelen >> 8);
-            printf("get %c frame, size: %d\n", (typelen & 0xFF), (typelen >> 8));
+//          printf("get %c frame, size: %d\n", (typelen & 0xFF), (typelen >> 8));
+            if (avkcpc->callback) avkcpc->callback(avkcpc->cbctxt, typelen & 0xFF, NULL, 0);
             recvncur   += typelen >> 8;
             recvntotal += typelen >> 8;
-            if (tickstart == 0) tickstart = get_tick_count();
+            tickgetframe = get_tick_count();
+            tickstart    = tickstart ? tickstart : tickgetframe;
         }
 
-        avkcpc_ikcp_update(avkcpc);
+        if (tickgetframe && get_tick_count() > tickgetframe + 3000) {
+            printf("===ck=== avkcpc disconnect !\n");
+            ikcp_release(avkcpc->ikcp);
+            avkcpc->ikcp = NULL;
+            tickgetframe = 0;
+            tickheartbeat= 0;
+        }
+
+        if (avkcpc->ikcp) avkcpc_ikcp_update(avkcpc);
         usleep(1*1000);
     }
 
@@ -134,7 +145,7 @@ _exit:
     return NULL;
 }
 
-void* avkcpc_init(char *ip, int port)
+void* avkcpc_init(char *ip, int port, PFN_AVKCPC_CB callback, void *cbctxt)
 {
     AVKCPC *avkcpc = calloc(1, sizeof(AVKCPC));
     if (!avkcpc) {
@@ -145,6 +156,9 @@ void* avkcpc_init(char *ip, int port)
     avkcpc->server_addr.sin_family      = AF_INET;
     avkcpc->server_addr.sin_port        = htons(port);
     avkcpc->server_addr.sin_addr.s_addr = inet_addr(ip);
+
+    avkcpc->callback = callback;
+    avkcpc->cbctxt   = cbctxt;
 
     // create client thread
     pthread_create(&avkcpc->pthread, NULL, avkcpc_thread_proc, avkcpc);
