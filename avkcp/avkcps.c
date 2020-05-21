@@ -15,6 +15,7 @@
 #include <winsock2.h>
 #define usleep(t) Sleep((t) / 1000)
 #define get_tick_count GetTickCount
+#define snprintf _snprintf
 #endif
 
 typedef struct {
@@ -23,17 +24,18 @@ typedef struct {
     uint32_t  status;
     pthread_t pthread;
 
-    void    *adev;
-    void    *vdev;
-    CODEC   *aenc;
-    CODEC   *venc;
-    ikcpcb  *ikcp;
-    uint32_t tick_kcp_update;
-    struct   sockaddr_in server_addr;
-    struct   sockaddr_in client_addr;
-    int      client_connected;
-    SOCKET   server_fd;
-    uint8_t  buff[2 * 1024 * 1024];
+    void     *adev;
+    void     *vdev;
+    CODEC    *aenc;
+    CODEC    *venc;
+    ikcpcb   *ikcp;
+    uint32_t  tick_kcp_update;
+    struct    sockaddr_in server_addr;
+    struct    sockaddr_in client_addr;
+    int       client_connected;
+    SOCKET    server_fd;
+    char      avinfostr[256];
+    uint8_t   buff[2 * 1024 * 1024];
 } AVKCPS;
 
 static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
@@ -135,6 +137,7 @@ static void* avkcps_thread_proc(void *argv)
                 vdev_start (avkcps->vdev, 1);
                 tickheartbeat = get_tick_count();
                 printf("===ck=== client connected !\n");
+                ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr) + 1);
             }
             if (memcmp(&avkcps->client_addr, &fromaddr, sizeof(avkcps->client_addr)) == 0) ikcp_input(avkcps->ikcp, buffer, ret);
         }
@@ -152,6 +155,7 @@ static void* avkcps_thread_proc(void *argv)
                     codec_start(avkcps->venc, 0);
                     adev_start (avkcps->adev, 0);
                     vdev_start (avkcps->vdev, 0);
+                    memset(&avkcps->client_addr, 0, sizeof(avkcps->client_addr));
                 }
             }
         }
@@ -169,7 +173,7 @@ _exit:
     return NULL;
 }
 
-void* avkcps_init(int port, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
+void* avkcps_init(int port, int channels, int samprate, int width, int height, int frate, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
 {
     AVKCPS *avkcps = calloc(1, sizeof(AVKCPS));
     if (!avkcps) {
@@ -185,6 +189,8 @@ void* avkcps_init(int port, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
     avkcps->vdev = vdev;
     avkcps->aenc = aenc;
     avkcps->venc = venc;
+    snprintf(avkcps->avinfostr, sizeof(avkcps->avinfostr), "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d;",
+        aenc->name, channels, samprate, venc->name, width, height, frate);
 
     // create server thread
     pthread_create(&avkcps->pthread, NULL, avkcps_thread_proc, avkcps);

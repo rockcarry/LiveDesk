@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     case 0: live->rtsp  = rtspserver_init(recpath, live->adev, live->vdev, live->aenc, live->venc, framerate); break;
     case 1: live->rtmp  = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
     case 2: live->rec   = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 3: live->avkcps= avkcps_init(avkcpport, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 3: live->avkcps= avkcps_init(avkcpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     printf("\n\ntype help for more infomation and command.\n\n");
