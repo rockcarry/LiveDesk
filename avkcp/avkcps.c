@@ -110,7 +110,7 @@ static void* avkcps_thread_proc(void *argv)
 #ifdef WIN32
     opt = 1; ioctlsocket(avkcps->server_fd, FIONBIO, &opt); // setup non-block io mode
 #else
-    fcntl(avkcps->server_fd, F_SETFL, fcntl(avkcpc->server_fd, F_GETFL, 0) | O_NONBLOCK);  // setup non-block io mode
+    fcntl(avkcps->server_fd, F_SETFL, fcntl(avkcps->server_fd, F_GETFL, 0) | O_NONBLOCK);  // setup non-block io mode
 #endif
 
     while (!(avkcps->status & TS_EXIT)) {
