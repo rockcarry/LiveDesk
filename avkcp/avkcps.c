@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <winsock2.h>
 #include "adev.h"
 #include "vdev.h"
 #include "codec.h"
@@ -16,6 +15,21 @@
 #define usleep(t) Sleep((t) / 1000)
 #define get_tick_count GetTickCount
 #define snprintf _snprintf
+#else
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#define SOCKET int
+#define closesocket close
+static uint32_t get_tick_count()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
 #endif
 
 typedef struct {
@@ -91,8 +105,13 @@ static void* avkcps_thread_proc(void *argv)
         printf("failed to bind !\n");
         goto _exit;
     }
+
+    opt = 256*1024; setsockopt(avkcps->server_fd, SOL_SOCKET, SO_RCVBUF, (char*)&opt, sizeof(int));
+#ifdef WIN32
     opt = 1; ioctlsocket(avkcps->server_fd, FIONBIO, &opt); // setup non-block io mode
-    opt = 1; setsockopt(avkcps->server_fd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(int));
+#else
+    fcntl(avkcps->server_fd, F_SETFL, fcntl(avkcpc->server_fd, F_GETFL, 0) | O_NONBLOCK);  // setup non-block io mode
+#endif
 
     while (!(avkcps->status & TS_EXIT)) {
         if (!(avkcps->status & TS_START)) { usleep(100*1000); continue; }
