@@ -40,7 +40,7 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate);
 #define codec_start(codec, s)                 (codec)->start(codec, s)
 #define codec_reset(codec, t)                 (codec)->reset(codec, t)
 #define codec_obuflock(codec, p, m, h, t, s)  (codec)->obuflock(codec, p, m, h, t, s)
-#define codec_obuunflock(codec, h, t, s)      (codec)->obufunlock(codec, h, t, s)
+#define codec_obufunlock(codec, h, t, s)      (codec)->obufunlock(codec, h, t, s)
 
 #ifdef __cplusplus
 }
