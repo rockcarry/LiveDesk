@@ -72,7 +72,7 @@ static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len)
     int remaining = len + sizeof(int32_t), cursend;
     *(int32_t*)buf = (type << 0) | (len << 8);
     do {
-        cursend = remaining < 1024 ? remaining : 1024;
+        cursend = remaining < 64*1024 ? remaining : 64*1024;
         ikcp_send(avkcps->ikcp, buf, cursend);
         buf += cursend; remaining -= cursend;
     } while (remaining > 0);
