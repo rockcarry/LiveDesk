@@ -223,6 +223,28 @@ static void reset(void *ctxt, int type)
     }
 }
 
+static void obuflock(void *ctxt, uint8_t **pbuf, int *max, int *head, int *tail, int *size)
+{
+    H264ENC *enc = (H264ENC*)ctxt;
+    if (!ctxt) return;
+    pthread_mutex_lock(&enc->omutex);
+    *pbuf = enc->obuff;
+    *max  = sizeof(enc->obuff);
+    *head = enc->ohead;
+    *tail = enc->otail;
+    *size = enc->osize;
+}
+
+static void obufunlock(void *ctxt, int head, int tail, int size)
+{
+    H264ENC *enc = (H264ENC*)ctxt;
+    if (!ctxt) return;
+    enc->ohead = head;
+    enc->otail = tail;
+    enc->osize = size;
+    pthread_mutex_unlock(&enc->omutex);
+}
+
 CODEC* h264enc_init(int frate, int w, int h, int bitrate)
 {
     x264_param_t param; int i;
@@ -230,11 +252,13 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "h264enc", sizeof(enc->name));
-    enc->uninit = uninit;
-    enc->write  = write;
-    enc->read   = read;
-    enc->start  = start;
-    enc->reset  = reset;
+    enc->uninit     = uninit;
+    enc->write      = write;
+    enc->read       = read;
+    enc->start      = start;
+    enc->reset      = reset;
+    enc->obuflock   = obuflock;
+    enc->obufunlock = obufunlock;
 
     // init mutex & cond
     pthread_mutex_init(&enc->imutex, NULL);
