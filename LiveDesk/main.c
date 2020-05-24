@@ -151,10 +151,10 @@ int main(int argc, char *argv[])
     ffrecorder_exit(live->rec );
     rtmppusher_exit(live->rtmp);
     rtspserver_exit(live->rtsp);
-    codec_uninit(live->aenc);
-    codec_uninit(live->venc);
     adev_free(live->adev);
     vdev_free(live->vdev);
+    codec_uninit(live->aenc);
+    codec_uninit(live->venc);
 
     log_done();
     return 0;
