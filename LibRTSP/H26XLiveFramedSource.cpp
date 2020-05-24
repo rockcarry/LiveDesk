@@ -47,6 +47,5 @@ void H26XLiveFramedSource::doGetNextFrame() {
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:
     nextTask() = envir().taskScheduler().scheduleDelayedTask(0, (TaskFunc*)FramedSource::afterGetting, this);
-    if (mServer->bexit) handleClosure();
 }
 
