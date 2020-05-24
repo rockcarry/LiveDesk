@@ -37,7 +37,7 @@ static void* rtmppush_thread_proc(void *argv)
             continue;
         }
 
-        readsize = codec_read(pusher->aenc, pusher->buffer, aenctype ? sizeof(pusher->buffer) : 160, &framesize, 16);
+        readsize = codec_read(pusher->aenc, pusher->buffer, sizeof(pusher->buffer), &framesize, 16);
         if (readsize > 0) {
             if (aenctype) {
                 rtmp_push_aac (pusher->rtmp, pusher->buffer, readsize);

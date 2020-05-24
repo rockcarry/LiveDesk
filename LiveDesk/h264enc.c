@@ -89,8 +89,9 @@ static void* venc_encode_thread_proc(void *param)
 
         pthread_mutex_lock(&enc->omutex);
         if (sizeof(len) + len <= sizeof(enc->obuff) - enc->osize) {
-            enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&len, sizeof(len));
-            enc->osize+= sizeof(len);
+            uint32_t typelen = 'V' | (len << 8);
+            enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
+            enc->osize+= sizeof(typelen);
             for (i=0; i<num; i++) {
                 enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, nals[i].p_payload, nals[i].i_payload);
             }
@@ -179,6 +180,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
     if (enc->osize > 0) {
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
         enc->osize-= sizeof(framesize);
+        framesize  = ((uint32_t)framesize >> 8);
         readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);

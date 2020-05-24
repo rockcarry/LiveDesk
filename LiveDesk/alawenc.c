@@ -46,12 +46,14 @@ static uint8_t pcm2alaw(int16_t pcm)
 
 static void write(void *ctxt, void *buf[8], int len[8])
 {
-    int nwrite, i;
+    uint32_t typelen, i;
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
     pthread_mutex_lock(&enc->omutex);
-    nwrite = MIN(len[0], (int)sizeof(enc->obuff) - enc->osize);
-    for (i=0; i<(int)(nwrite/sizeof(int16_t)); i++) {
+    typelen = MIN(len[0]/sizeof(int16_t), sizeof(enc->obuff) - enc->osize);
+    typelen = 'A' | (typelen << 8);
+    enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
+    for (i=0; i<(typelen >> 8); i++) {
         enc->obuff[enc->otail] = pcm2alaw(((int16_t*)buf[0])[i]);
         if (++enc->otail == sizeof(enc->obuff)) enc->otail = 0;
         if (enc->osize < (int)sizeof(enc->obuff)) {
@@ -60,14 +62,14 @@ static void write(void *ctxt, void *buf[8], int len[8])
             enc->ohead = enc->otail;
         }
     }
-    if (nwrite > 0) pthread_cond_signal(&enc->ocond);
+    pthread_cond_signal(&enc->ocond);
     pthread_mutex_unlock(&enc->omutex);
 }
 
 static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
-    int32_t readsize = 0, ret = 0;
+    int32_t framesize = 0, readsize = 0, ret = 0;
     struct  timespec ts;
     if (!ctxt) return 0;
 
@@ -79,11 +81,15 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
     pthread_mutex_lock(&enc->omutex);
     while (timeout && enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
-        readsize   = MIN(len, enc->osize);
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
+        enc->osize-= sizeof(framesize);
+        framesize  = ((uint32_t)framesize >> 8);
+        readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
-        enc->osize-= readsize;
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
+        enc->osize-= framesize;
     }
-    if (fsize) *fsize = readsize;
+    if (fsize) *fsize = framesize;
     pthread_mutex_unlock(&enc->omutex);
     return readsize;
 }

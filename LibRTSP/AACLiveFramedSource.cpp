@@ -53,7 +53,7 @@ void AACLiveFramedSource::doGetNextFrame() {
     int readsize = codec_read(mServer->aenc, fTo, fMaxSize, (int*)&fFrameSize, 16);
     fNumTruncatedBytes = fFrameSize - readsize;
     if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
-    fDurationInMicroseconds = fFrameSize ? fuSecsPerFrame : 0;
+    fDurationInMicroseconds = fuSecsPerFrame;
     gettimeofday(&fPresentationTime, NULL);
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:
