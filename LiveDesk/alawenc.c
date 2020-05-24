@@ -50,19 +50,19 @@ static void write(void *ctxt, void *buf[8], int len[8])
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
     pthread_mutex_lock(&enc->omutex);
-    typelen = MIN(len[0]/sizeof(int16_t), sizeof(enc->obuff) - enc->osize);
-    typelen = 'A' | (typelen << 8);
-    enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
-    for (i=0; i<(typelen >> 8); i++) {
-        enc->obuff[enc->otail] = pcm2alaw(((int16_t*)buf[0])[i]);
-        if (++enc->otail == sizeof(enc->obuff)) enc->otail = 0;
-        if (enc->osize < (int)sizeof(enc->obuff)) {
-            enc->osize++;
-        } else {
-            enc->ohead = enc->otail;
+    typelen = len[0] / sizeof(int16_t);
+    if (typelen + sizeof(typelen) <= sizeof(enc->obuff) - enc->osize) {
+        typelen = 'A' | (typelen << 8);
+        enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
+        enc->osize+= sizeof(typelen);
+        for (i=0; i<len[0]/sizeof(int16_t); i++,enc->osize++) {
+            if (enc->otail == sizeof(enc->obuff)) enc->otail = 0;
+            enc->obuff[enc->otail++] = pcm2alaw(((int16_t*)buf[0])[i]);
         }
+        pthread_cond_signal(&enc->ocond);
+    } else {
+        log_printf("aenc drop data %d !\n", len[0]);
     }
-    pthread_cond_signal(&enc->ocond);
     pthread_mutex_unlock(&enc->omutex);
 }
 
