@@ -78,6 +78,32 @@ static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len)
     } while (remaining > 0);
 }
 
+static int avkcps_do_connect(AVKCPS *avkcps)
+{
+    avkcps->ikcp = ikcp_create(AVKCP_CONV, avkcps);
+    if (!avkcps->ikcp) return -1;
+    ikcp_setoutput(avkcps->ikcp, udp_output);
+    ikcp_nodelay(avkcps->ikcp, 1, 10, 2, 1);
+    ikcp_wndsize(avkcps->ikcp, 1024, 256);
+    avkcps->ikcp->interval   = 1;
+    avkcps->ikcp->rx_minrto  = 5;
+    avkcps->ikcp->fastresend = 1;
+    avkcps->ikcp->stream     = 1;
+    return 0;
+}
+
+static void avkcps_do_disconnect(AVKCPS *avkcps)
+{
+    avkcps->client_connected = 0;
+    codec_start(avkcps->aenc, 0);
+    codec_start(avkcps->venc, 0);
+    adev_start (avkcps->adev, 0);
+    vdev_start (avkcps->vdev, 0);
+    memset(&avkcps->client_addr, 0, sizeof(avkcps->client_addr));
+    ikcp_release(avkcps->ikcp);
+    avkcps->ikcp = NULL;
+}
+
 static void* avkcps_thread_proc(void *argv)
 {
     AVKCPS  *avkcps = (AVKCPS*)argv;
@@ -116,28 +142,24 @@ static void* avkcps_thread_proc(void *argv)
     while (!(avkcps->status & TS_EXIT)) {
         if (!(avkcps->status & TS_START)) { usleep(100*1000); continue; }
 
-        if (avkcps->ikcp == NULL) {
-            avkcps->ikcp = ikcp_create(AVKCP_CONV, avkcps);
-            if (avkcps->ikcp != NULL) {
-                ikcp_setoutput(avkcps->ikcp, udp_output);
-                ikcp_nodelay(avkcps->ikcp, 1, 10, 2, 1);
-                ikcp_wndsize(avkcps->ikcp, 1024, 256);
-                avkcps->ikcp->interval = 1;
-                avkcps->ikcp->rx_minrto = 5;
-                avkcps->ikcp->fastresend = 1;
-                avkcps->ikcp->stream = 1;
-            } else { usleep(100*1000); continue; }
+        if (!avkcps->ikcp) {
+            if (avkcps_do_connect(avkcps) != 0) { usleep(100*1000); continue; }
         }
 
-        if (avkcps->client_connected && ikcp_waitsnd(avkcps->ikcp) < 2000) {
-            int readsize, framesize;
-            readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
-            if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                ikcp_send_packet(avkcps, 'A', avkcps->buff, framesize);
-            }
-            readsize = codec_read(avkcps->venc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
-            if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                ikcp_send_packet(avkcps, 'V', avkcps->buff, framesize);
+        if (avkcps->client_connected) {
+            if (ikcp_waitsnd(avkcps->ikcp) < 1000) {
+                int readsize, framesize;
+                readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
+                if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
+                    ikcp_send_packet(avkcps, 'A', avkcps->buff, framesize);
+                }
+                readsize = codec_read(avkcps->venc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
+                if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
+                    ikcp_send_packet(avkcps, 'V', avkcps->buff, framesize);
+                }
+            } else {
+                printf("===ck=== client disconnect, max wait send buffer number reached !\n");
+                avkcps_do_disconnect(avkcps);
             }
         }
 
@@ -165,15 +187,9 @@ static void* avkcps_thread_proc(void *argv)
                 tickheartbeat = get_tick_count();
                 printf("ikcp_waitsnd: %d\n", ikcp_waitsnd(avkcps->ikcp));
             } else {
-                if (get_tick_count() > tickheartbeat + 3000) {
-                    printf("===ck=== client disconnect !\n");
-                    avkcps->client_connected = 0;
-                    codec_start(avkcps->aenc, 0);
-                    codec_start(avkcps->venc, 0);
-                    adev_start (avkcps->adev, 0);
-                    vdev_start (avkcps->vdev, 0);
-                    memset(&avkcps->client_addr, 0, sizeof(avkcps->client_addr));
-                    ikcp_release(avkcps->ikcp); avkcps->ikcp = NULL;
+                if (get_tick_count() > tickheartbeat + 2000) {
+                    printf("===ck=== client disconnect, no heart beat !\n");
+                    avkcps_do_disconnect(avkcps);
                 }
             }
         }
