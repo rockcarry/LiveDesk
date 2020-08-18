@@ -160,7 +160,7 @@ static void* avkcps_thread_proc(void *argv)
                 }
             } else {
                 printf("===ck=== client disconnect, max wait send buffer number reached !\n");
-                avkcps_do_disconnect(avkcps);
+                avkcps_do_disconnect(avkcps); continue;
             }
         }
 
