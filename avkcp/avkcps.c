@@ -72,7 +72,7 @@ static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len)
     int remaining = len + sizeof(int32_t), cursend;
     *(int32_t*)buf = (type << 0) | (len << 8);
     do {
-        cursend = remaining < 512 * 1024 ? remaining : 512 * 1024;
+        cursend = remaining < 512 * 2048 ? remaining : 512 * 2048;
         ikcp_send(avkcps->ikcp, buf, cursend);
         buf += cursend; remaining -= cursend;
     } while (remaining > 0);
@@ -84,7 +84,7 @@ static int avkcps_do_connect(AVKCPS *avkcps)
     if (!avkcps->ikcp) return -1;
     ikcp_setoutput(avkcps->ikcp, udp_output);
     ikcp_nodelay(avkcps->ikcp, 1, 10, 2, 1);
-    ikcp_wndsize(avkcps->ikcp, 1024, 256);
+    ikcp_wndsize(avkcps->ikcp, 2048, 256);
     ikcp_setmtu(avkcps->ikcp, 512);
     avkcps->ikcp->interval   = 1;
     avkcps->ikcp->rx_minrto  = 5;
@@ -148,7 +148,7 @@ static void* avkcps_thread_proc(void *argv)
         }
 
         if (avkcps->client_connected) {
-            if (ikcp_waitsnd(avkcps->ikcp) < 1000) {
+            if (ikcp_waitsnd(avkcps->ikcp) < 2000) {
                 int readsize, framesize;
                 readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
                 if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
