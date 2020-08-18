@@ -133,7 +133,7 @@ static void* avkcps_thread_proc(void *argv)
         goto _exit;
     }
 
-    opt = 256*1024; setsockopt(avkcps->server_fd, SOL_SOCKET, SO_RCVBUF, (char*)&opt, sizeof(int));
+    opt = 2*1024; setsockopt(avkcps->server_fd, SOL_SOCKET, SO_RCVBUF, (char*)&opt, sizeof(int));
 #ifdef WIN32
     opt = 1; ioctlsocket(avkcps->server_fd, FIONBIO, &opt); // setup non-block io mode
 #else
