@@ -12,6 +12,7 @@
 #include "recorder.h"
 #include "avkcps.h"
 #include "avkcpc.h"
+#include "ffrdp.h"
 #include "log.h"
 
 #ifdef WIN32
@@ -28,6 +29,7 @@ typedef struct {
     void  *rec;
     void  *avkcps;
     void  *avkcpc;
+    void  *ffrdps;
     #define TS_EXIT  (1 << 0)
     int   status;
 } LIVEDESK;
@@ -41,9 +43,10 @@ int main(int argc, char *argv[])
     int       vwidth   = GetSystemMetrics(SM_CXSCREEN);
     int       vheight  = GetSystemMetrics(SM_CYSCREEN);
     int       venctype = 0, framerate= 20, vbitrate = 512000;
-    int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4
+    int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4, 3:avkcp, 4:ffrdp
     int       duration = 60000;
     int       avkcpport= 8000;
+    int       ffrdpport= 8000;
     char      recpath[256] = "livedesk";
     void     *avkcpc = NULL;
 
@@ -72,6 +75,8 @@ int main(int argc, char *argv[])
             rectype = 2; strncpy(recpath, argv[i] + 5, sizeof(recpath));
         } else if (strstr(argv[i], "-avkcps=") == argv[i]) {
             rectype = 3; avkcpport = atoi(argv[i] + 8);
+        } else if (strstr(argv[i], "-ffrdps=") == argv[i]) {
+            rectype = 4; ffrdpport = atoi(argv[i] + 8);
         } else if (strstr(argv[i], "-duration=") == argv[i]) {
             duration = atoi(argv[i] + 10);
         }
@@ -84,10 +89,11 @@ int main(int argc, char *argv[])
         samplerate = 8000;
         abitrate   = 64000;
     }
-    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : rectype == 2 ? "mp4" : rectype == 3 ? "avkcps" : "unknow");
+    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : rectype == 2 ? "mp4" : rectype == 3 ? "avkcps" : rectype == 4 ? "ffrdps" : "unknow");
     printf("recpath   : %s\n", recpath);
     printf("duration  : %d\n", duration);
     printf("avkcpport : %d\n", avkcpport);
+    printf("ffrdpport : %d\n", ffrdpport);
     printf("aenctype  : %s\n", aenctype ? "aac" : "alaw");
     printf("channels  : %d\n", channels);
     printf("samplerate: %d\n", samplerate);
@@ -112,6 +118,7 @@ int main(int argc, char *argv[])
     case 1: live->rtmp  = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
     case 2: live->rec   = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     case 3: live->avkcps= avkcps_init(avkcpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 4: live->ffrdps= ffrdps_init(ffrdpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     printf("\n\ntype help for more infomation and command.\n\n");
@@ -148,6 +155,7 @@ int main(int argc, char *argv[])
 
     avkcpc_exit(live->avkcpc);
     avkcps_exit(live->avkcps);
+    ffrdps_exit(live->ffrdps);
     ffrecorder_exit(live->rec );
     rtmppusher_exit(live->rtmp);
     rtspserver_exit(live->rtsp);
