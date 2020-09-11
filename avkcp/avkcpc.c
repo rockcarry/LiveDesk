@@ -40,12 +40,14 @@ typedef struct {
     struct    sockaddr_in server_addr;
     struct    sockaddr_in client_addr;
     SOCKET    client_fd;
-    uint8_t   buff[2 * 1024 * 1024];
+
+    PFN_AVKCPC_CB callback;
+    void         *cbctxt;
+
     int       head;
     int       tail;
     int       size;
-    PFN_AVKCPC_CB callback;
-    void         *cbctxt;
+    uint8_t   buff[2 * 1024 * 1024];
 } AVKCPC;
 
 static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
