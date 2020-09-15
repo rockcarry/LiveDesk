@@ -72,7 +72,7 @@ static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len)
     int remaining = len + sizeof(int32_t), cursend;
     *(int32_t*)buf = (type << 0) | (len << 8);
     do {
-        cursend = remaining < 512 * 2048 ? remaining : 512 * 2048;
+        cursend = remaining < 1024 * 1024 ? remaining : 1024 * 1024;
         ikcp_send(avkcps->ikcp, buf, cursend);
         buf += cursend; remaining -= cursend;
     } while (remaining > 0);
@@ -84,10 +84,9 @@ static int avkcps_do_connect(AVKCPS *avkcps)
     if (!avkcps->ikcp) return -1;
     ikcp_setoutput(avkcps->ikcp, udp_output);
     ikcp_nodelay(avkcps->ikcp, 1, 10, 2, 1);
-    ikcp_wndsize(avkcps->ikcp, 2048, 256);
-    ikcp_setmtu(avkcps->ikcp, 512);
-    avkcps->ikcp->interval   = 1;
-    avkcps->ikcp->rx_minrto  = 5;
+    ikcp_wndsize(avkcps->ikcp, 1024, 256);
+    avkcps->ikcp->interval   = 10;
+    avkcps->ikcp->rx_minrto  = 50;
     avkcps->ikcp->fastresend = 1;
     avkcps->ikcp->stream     = 1;
     return 0;
