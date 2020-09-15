@@ -45,7 +45,7 @@ static void* vdev_capture_thread_proc(void *param)
         ticknext  =(ticknext ? ticknext : tickcur) + period;
         ticksleep = ticknext - tickcur;
 
-        BitBlt(vdev->hdcdst, 0, 0, vdev->screen_width, vdev->screen_height, vdev->hdcsrc, 0, 0, SRCCOPY);
+        BitBlt(vdev->hdcdst, 0, 0, vdev->screen_width, vdev->screen_height, vdev->hdcsrc, 0, 0, SRCCOPY|CAPTUREBLT);
         curinfo.cbSize = sizeof(CURSORINFO);
         GetCursorInfo(&curinfo);
         GetIconInfo(curinfo.hCursor, &icoinfo);
