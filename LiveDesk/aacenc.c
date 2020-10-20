@@ -7,7 +7,7 @@
 #include "faac.h"
 #include "log.h"
 
-#define IN_BUF_SIZE  (1024 * 2 * 2)
+#define IN_BUF_SIZE  (1024 * 2 * 4)
 #define OUT_BUF_SIZE (1024 * 2 * 1)
 typedef struct {
     CODEC_INTERFACE_FUNCS
