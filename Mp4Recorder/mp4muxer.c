@@ -29,7 +29,7 @@ static int h264_parse_nalu_header(uint8_t *data, int len)
 int h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf, int *sps_len, uint8_t **pps_buf, int *pps_len)
 {
     uint8_t *sbuf, *pbuf;
-    int slen, plen, type, i;
+    int slen = 0, plen = 0, type, i;
 
 #if 0
     printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", data[0 ], data[1 ], data[2 ], data[3 ], data[4 ], data[5 ], data[6 ], data[7 ]);
