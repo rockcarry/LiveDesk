@@ -1,0 +1,10 @@
+LIBX264 {
+  global:
+    x264_param_default_preset;
+    x264_param_apply_profile;
+    x264_encoder_open;
+    x264_encoder_encode;
+    x264_encoder_close;
+  local:
+    *;
+};
