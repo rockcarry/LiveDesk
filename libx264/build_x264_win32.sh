@@ -22,7 +22,7 @@ make -j2 && make install
 
 cd $PWD/_install/lib
 ar -x libx264.a
-gcc -o x264.dll -shared -flto *.o libx264.a -Wl,--out-implib,x264.lib
+gcc -o x264.dll -shared -flto *.o libx264.a && strip x264.dll
 rm *.o
-strip x264.dll
+dlltool -l x264.lib -d x264.def
 cd -

@@ -1,0 +1,8 @@
+LIBRARY faac
+EXPORTS
+    faacEncOpen
+    faacEncClose
+    faacEncEncode
+    faacEncGetCurrentConfiguration
+    faacEncGetDecoderSpecificInfo
+    faacEncSetConfiguration

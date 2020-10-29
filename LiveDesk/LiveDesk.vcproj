@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib librtmp.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../pthread-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
 				GenerateDebugInformation="true"
@@ -138,7 +138,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib librtmp.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../pthread-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
 				GenerateDebugInformation="true"
