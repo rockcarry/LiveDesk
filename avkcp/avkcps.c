@@ -61,7 +61,7 @@ static int udp_output(const char *buf, int len, ikcpcb *kcp, void *user)
 static void avkcps_ikcp_update(AVKCPS *avkcps)
 {
     uint32_t tickcur = get_tick_count();
-    if (tickcur >= avkcps->tick_kcp_update) {
+    if ((int32_t)tickcur - (int32_t)avkcps->tick_kcp_update >= 0) {
         ikcp_update(avkcps->ikcp, tickcur);
         avkcps->tick_kcp_update = ikcp_check(avkcps->ikcp, get_tick_count());
     }
@@ -187,7 +187,7 @@ static void* avkcps_thread_proc(void *argv)
                 tickheartbeat = get_tick_count();
                 printf("ikcp_waitsnd: %d\n", ikcp_waitsnd(avkcps->ikcp));
             } else {
-                if (get_tick_count() > tickheartbeat + 3000) {
+                if ((int32_t)get_tick_count() - (int32_t)tickheartbeat > 3000) {
                     printf("===ck=== client disconnect, no heart beat !\n");
                     avkcps_do_disconnect(avkcps);
                 }

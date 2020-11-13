@@ -72,7 +72,7 @@ static void* record_thread_proc(void *argv)
             mp4muxer_video(mp4muxer, recorder->buffer, readsize, 0);
         }
 
-        if ((int)(get_tick_count() - recorder->starttick) > recorder->duration) {
+        if ((int32_t)get_tick_count() - (int32_t)recorder->starttick > recorder->duration) {
             recorder->starttick += recorder->duration;
             codec_reset(recorder->venc, CODEC_RESET_REQUEST_IDR);
             mp4muxer_exit(mp4muxer);
