@@ -39,7 +39,7 @@ H26XLiveFramedSource::~H26XLiveFramedSource() {
 }
 
 void H26XLiveFramedSource::doGetNextFrame() {
-    int readsize = codec_read(mServer->venc, fTo, fMaxSize, (int*)&fFrameSize, 10);
+    int readsize = codec_read(mServer->venc, fTo, fMaxSize, (int*)&fFrameSize, NULL, 10);
     fNumTruncatedBytes = fFrameSize - readsize;
     if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
     fDurationInMicroseconds = fuSecsPerFrame;

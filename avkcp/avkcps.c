@@ -149,11 +149,11 @@ static void* avkcps_thread_proc(void *argv)
         if (avkcps->client_connected) {
             if (ikcp_waitsnd(avkcps->ikcp) < 2000) {
                 int readsize, framesize;
-                readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
+                readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, NULL, 0);
                 if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
                     ikcp_send_packet(avkcps, 'A', avkcps->buff, framesize);
                 }
-                readsize = codec_read(avkcps->venc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, 0);
+                readsize = codec_read(avkcps->venc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, NULL, 0);
                 if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
                     ikcp_send_packet(avkcps, 'V', avkcps->buff, framesize);
                 }

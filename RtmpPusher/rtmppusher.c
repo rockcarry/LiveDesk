@@ -65,13 +65,13 @@ static void* rtmppush_thread_proc(void *argv)
         rtmppush_start_upstream(pusher, connected);
         if (!connected) { usleep(100*1000); continue; }
 
-        readsize = codec_read(pusher->aenc, pusher->buffer, sizeof(pusher->buffer), &framesize, 16);
+        readsize = codec_read(pusher->aenc, pusher->buffer, sizeof(pusher->buffer), &framesize, NULL, 16);
         if (readsize > 0) {
             if (aenctype) rtmp_push_aac (pusher->rtmp, pusher->buffer, readsize);
             else          rtmp_push_alaw(pusher->rtmp, pusher->buffer, readsize);
         }
 
-        readsize = codec_read(pusher->venc, pusher->buffer, sizeof(pusher->buffer), &framesize, 16);
+        readsize = codec_read(pusher->venc, pusher->buffer, sizeof(pusher->buffer), &framesize, NULL, 16);
         if (readsize > 0) rtmp_push_h264(pusher->rtmp, pusher->buffer, readsize);
     }
     return NULL;

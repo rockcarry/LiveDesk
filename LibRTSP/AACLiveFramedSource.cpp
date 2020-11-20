@@ -50,7 +50,7 @@ AACLiveFramedSource::~AACLiveFramedSource() {
 }
 
 void AACLiveFramedSource::doGetNextFrame() {
-    int readsize = codec_read(mServer->aenc, fTo, fMaxSize, (int*)&fFrameSize, 0);
+    int readsize = codec_read(mServer->aenc, fTo, fMaxSize, (int*)&fFrameSize, NULL, 0);
     fNumTruncatedBytes = fFrameSize - readsize;
     if (mMaxFrameSize < fFrameSize) mMaxFrameSize = fFrameSize;
     fDurationInMicroseconds = fuSecsPerFrame;
@@ -58,5 +58,4 @@ void AACLiveFramedSource::doGetNextFrame() {
 
     // To avoid possible infinite recursion, we need to return to the event loop to do this:
     nextTask() = envir().taskScheduler().scheduleDelayedTask(0, (TaskFunc*)FramedSource::afterGetting, this);
-
 }

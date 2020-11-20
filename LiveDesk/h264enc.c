@@ -32,9 +32,10 @@ typedef struct {
     int      otail;
     int      osize;
 
-    #define TS_EXIT        (1 << 0)
-    #define TS_START       (1 << 1)
-    #define TS_REQUEST_IDR (1 << 2)
+    #define TS_EXIT             (1 << 0)
+    #define TS_START            (1 << 1)
+    #define TS_REQUEST_IDR      (1 << 2)
+    #define TS_KEYFRAME_DROPPED (1 << 3)
     int      status;
 
     pthread_mutex_t imutex;
@@ -52,7 +53,7 @@ static void* venc_encode_thread_proc(void *param)
     uint8_t *yuv = NULL;
     x264_picture_t pic_in, pic_out;
     x264_nal_t *nals;
-    int32_t len, num, i;
+    int32_t key, len, num, i;
 
     x264_picture_init(&pic_in );
     x264_picture_init(&pic_out);
@@ -88,17 +89,24 @@ static void* venc_encode_thread_proc(void *param)
         if (len <= 0) continue;
 
         pthread_mutex_lock(&enc->omutex);
-        if (sizeof(len) + len <= sizeof(enc->obuff) - enc->osize) {
-            uint32_t typelen = 'V' | (len << 8);
-            enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
-            enc->osize+= sizeof(typelen);
-            for (i=0; i<num; i++) {
-                enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, nals[i].p_payload, nals[i].i_payload);
-            }
-            enc->osize += len;
-            pthread_cond_signal(&enc->ocond);
+        key = (nals[0].i_type == 7);
+        if ((enc->status & TS_KEYFRAME_DROPPED) && !key) {
+            log_printf("h264enc last key frame has dropped, and current frame is non-key frame, so drop it !\n");
         } else {
-            log_printf("venc drop data %d !\n", len);
+            if (sizeof(len) + len <= sizeof(enc->obuff) - enc->osize) {
+                uint32_t typelen = (key ? 'V' : 'v') | (len << 8);
+                enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
+                enc->osize+= sizeof(typelen);
+                for (i=0; i<num; i++) {
+                    enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, nals[i].p_payload, nals[i].i_payload);
+                }
+                enc->osize += len;
+                pthread_cond_signal(&enc->ocond);
+                if (key) enc->status &= ~TS_KEYFRAME_DROPPED;
+            } else {
+                log_printf("h264enc %s frame dropped !\n", key ? "key" : "non-key");
+                if (key) enc->status |=  TS_KEYFRAME_DROPPED;
+            }
         }
         pthread_mutex_unlock(&enc->omutex);
     }
@@ -163,10 +171,10 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
+static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout)
 {
     H264ENC *enc = (H264ENC*)ctxt;
-    int32_t framesize = 0, readsize = 0, ret = 0;
+    int32_t typelen = 0, framesize = 0, readsize = 0, ret = 0;
     struct  timespec ts;
     if (!ctxt) return 0;
 
@@ -178,15 +186,16 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
     pthread_mutex_lock(&enc->omutex);
     while (timeout && enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
-        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&typelen , sizeof(typelen));
         enc->osize-= sizeof(framesize);
-        framesize  = ((uint32_t)framesize >> 8);
+        framesize  = ((uint32_t)typelen >> 8);
         readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
         enc->osize-= framesize;
     }
     if (fsize) *fsize = framesize;
+    if (key  ) *key   = ((typelen & 0xFF) == 'V');
     pthread_mutex_unlock(&enc->omutex);
     return readsize;
 }

@@ -66,7 +66,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->omutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
+static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     int32_t framesize = 0, readsize = 0, ret = 0;
@@ -90,6 +90,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int timeout)
         enc->osize-= framesize;
     }
     if (fsize) *fsize = framesize;
+    if (key  ) *key   = 1;
     pthread_mutex_unlock(&enc->omutex);
     return readsize;
 }

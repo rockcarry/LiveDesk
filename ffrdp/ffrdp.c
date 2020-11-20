@@ -445,7 +445,7 @@ void ffrdp_update(void *ctxt)
             if (!(p->flags & FLAG_FAST_RESEND)) {
                 if (ffrdp->rto == FFRDP_MAX_RTO) {
                     p->flags &= ~FLAG_TIMEOUT_RESEND;
-                    ffrdp->counter_reach_maxrto ++;
+                    ffrdp->counter_reach_maxrto++;
                 } else p->flags |= FLAG_TIMEOUT_RESEND;
                 ffrdp->rto += ffrdp->rto / 2;
                 ffrdp->rto  = MIN(ffrdp->rto, FFRDP_MAX_RTO);
@@ -531,6 +531,7 @@ typedef struct {
     #define TS_EXIT             (1 << 0)
     #define TS_START            (1 << 1)
     #define TS_CLIENT_CONNECTED (1 << 2)
+    #define TS_KEYFRAME_DROPPED (1 << 3)
     uint32_t  status;
     pthread_t pthread;
 
@@ -545,14 +546,15 @@ typedef struct {
     uint8_t   buff[2 * 1024 * 1024];
 } FFRDPS;
 
-static void ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len)
+static int ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len)
 {
     int ret;
     *(int32_t*)buf = (type << 0) | (len << 8);
     ret = ffrdp_send(ffrdps->ffrdp, buf, len + sizeof(int32_t));
     if (ret != len + sizeof(int32_t)) {
         printf("ffrdp_send_packet send packet failed ! %d %d\n", ret, len + sizeof(int32_t));
-    }
+        return -1;
+    } else return 0;
 }
 
 static void* ffrdps_thread_proc(void *argv)
@@ -571,27 +573,35 @@ static void* ffrdps_thread_proc(void *argv)
         ret = ffrdp_recv(ffrdps->ffrdp, (char*)buffer, sizeof(buffer));
         if (ret > 0) {
             if ((ffrdps->status & TS_CLIENT_CONNECTED) == 0) {
-                ffrdps->status |= TS_CLIENT_CONNECTED;
-                printf("client connected !\n");
                 codec_reset(ffrdps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_reset(ffrdps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_start(ffrdps->aenc, 1);
                 codec_start(ffrdps->venc, 1);
                 adev_start (ffrdps->adev, 1);
                 vdev_start (ffrdps->vdev, 1);
-                ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr+sizeof(uint32_t)) + 1);
+                ret = ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr+sizeof(uint32_t)) + 1);
+                if (ret == 0) {
+                    printf("client connected !\n");
+                    ffrdps->status |= TS_CLIENT_CONNECTED;
+                }
             }
         }
 
         if ((ffrdps->status & TS_CLIENT_CONNECTED)) {
-            int readsize, framesize;
-            readsize = codec_read(ffrdps->aenc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, 0);
+            int readsize, framesize, keyframe;
+            readsize = codec_read(ffrdps->aenc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, &keyframe, 0);
             if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                ffrdp_send_packet(ffrdps, 'A', ffrdps->buff, framesize);
+                ret = ffrdp_send_packet(ffrdps, 'A', ffrdps->buff, framesize);
             }
-            readsize = codec_read(ffrdps->venc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, 0);
+            readsize = codec_read(ffrdps->venc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, &keyframe, 0);
             if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize);
+                if ((ffrdps->status & TS_KEYFRAME_DROPPED) && !keyframe) {
+                    printf("ffrdp key frame has dropped, and current frame is non-key frame, so drop it !\n");
+                } else {
+                    ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize);
+                    if (ret == 0 && keyframe) ffrdps->status &=~TS_KEYFRAME_DROPPED;
+                    if (ret != 0 && keyframe) ffrdps->status |= TS_KEYFRAME_DROPPED;
+                }
             }
         }
 
