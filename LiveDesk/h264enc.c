@@ -284,14 +284,30 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     param.i_height         = h;
     param.i_fps_num        = frate;
     param.i_fps_den        = 1;
-    param.i_slice_count_max= 1;
-    param.i_threads        = 1;
+//  param.i_slice_count_max= 1;
+//  param.i_threads        = 1;
     param.i_keyint_min     = frate * 2;
     param.i_keyint_max     = frate * 5;
-    param.rc.i_bitrate     = bitrate;
-    param.rc.i_rc_method   = X264_RC_ABR;
+    param.rc.i_bitrate     = bitrate / 1000;
+#if 0 // X264_RC_CQP
+    param.rc.i_rc_method       = X264_RC_CQP;
+    param.rc.i_qp_constant     = 35;
+    param.rc.i_qp_min          = 25;
+    param.rc.i_qp_max          = 50;
+#endif
+#if 0 // X264_RC_CRF
+    param.rc.i_rc_method       = X264_RC_CRF;
+    param.rc.f_rf_constant     = 25;
+    param.rc.f_rf_constant_max = 50;
+#endif
+#if 1 // X264_RC_ABR
+    param.rc.i_rc_method       = X264_RC_ABR;
+    param.rc.f_rate_tolerance  = 2;
+    param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
+#endif
     param.i_timebase_num   = 1;
     param.i_timebase_den   = 1000;
+    param.b_repeat_headers = 1;
     enc->ow   = w;
     enc->oh   = h;
     enc->x264 = x264_encoder_open(&param);
