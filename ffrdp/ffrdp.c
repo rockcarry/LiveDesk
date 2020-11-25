@@ -579,6 +579,8 @@ typedef struct {
     uint32_t  status;
     pthread_t pthread;
 
+    int channels, samprate, width, height, frate;
+
     void     *ffrdp;
     void     *adev;
     void     *vdev;
@@ -601,6 +603,16 @@ static int ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len)
     } else return 0;
 }
 
+static void buf2hexstr(char *str, int len, uint8_t *buf, int size)
+{
+    char tmp[3];
+    int  i;
+    for (i=0; i<size; i++) {
+        snprintf(tmp, sizeof(tmp), "%02x", buf[i]);
+        strncat(str, tmp, len);
+    }
+}
+
 static void* ffrdps_thread_proc(void *argv)
 {
     FFRDPS  *ffrdps = (FFRDPS*)argv;
@@ -617,16 +629,26 @@ static void* ffrdps_thread_proc(void *argv)
         ret = ffrdp_recv(ffrdps->ffrdp, (char*)buffer, sizeof(buffer));
         if (ret > 0) {
             if ((ffrdps->status & TS_CLIENT_CONNECTED) == 0) {
+                uint8_t spsbuf[256], ppsbuf[256];
+                char    spsstr[256] = "", ppsstr[256] = "";
+                int     spslen, ppslen;
                 codec_reset(ffrdps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_reset(ffrdps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_start(ffrdps->aenc, 1);
                 codec_start(ffrdps->venc, 1);
                 adev_start (ffrdps->adev, 1);
                 vdev_start (ffrdps->vdev, 1);
+                spslen = codec_getinfo(ffrdps->venc, "sps", spsbuf, sizeof(spsbuf));
+                ppslen = codec_getinfo(ffrdps->venc, "pps", ppsbuf, sizeof(ppsbuf));
+                buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
+                buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
+                snprintf(ffrdps->avinfostr+sizeof(uint32_t), sizeof(ffrdps->avinfostr)-sizeof(uint32_t),
+                    "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s;",
+                    ffrdps->aenc->name, ffrdps->channels, ffrdps->samprate, ffrdps->venc->name, ffrdps->width, ffrdps->height, ffrdps->frate, spsstr, ppsstr);
                 ret = ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr+sizeof(uint32_t)) + 1);
                 if (ret == 0) {
-                    printf("client connected !\n");
                     ffrdps->status |= TS_CLIENT_CONNECTED;
+                    printf("client connected !\n");
                 }
             }
         }
@@ -673,14 +695,16 @@ void* ffrdps_init(int port, int channels, int samprate, int width, int height, i
         return NULL;
     }
 
-    ffrdps->adev  = adev;
-    ffrdps->vdev  = vdev;
-    ffrdps->aenc  = aenc;
-    ffrdps->venc  = venc;
-    ffrdps->port  = port;
-    snprintf(ffrdps->avinfostr+sizeof(uint32_t), sizeof(ffrdps->avinfostr)-sizeof(uint32_t),
-        "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d;",
-         aenc->name, channels, samprate, venc->name, width, height, frate);
+    ffrdps->adev     = adev;
+    ffrdps->vdev     = vdev;
+    ffrdps->aenc     = aenc;
+    ffrdps->venc     = venc;
+    ffrdps->port     = port;
+    ffrdps->channels = channels;
+    ffrdps->samprate = samprate;
+    ffrdps->width    = width;
+    ffrdps->height   = height;
+    ffrdps->frate    = frate;
 
     // create server thread
     pthread_create(&ffrdps->pthread, NULL, ffrdps_thread_proc, ffrdps);
