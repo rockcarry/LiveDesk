@@ -75,6 +75,11 @@ static void* aenc_encode_thread_proc(void *param)
     return NULL;
 }
 
+static int getinfo(void *ctxt, char *name, uint8_t *buf, int len)
+{
+    return -1;
+}
+
 static void uninit(void *ctxt)
 {
     AACENC *enc = (AACENC*)ctxt;
@@ -195,6 +200,7 @@ CODEC* aacenc_init(int channels, int samplerate, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "aacenc", sizeof(enc->name));
+    enc->getinfo    = getinfo;
     enc->uninit     = uninit;
     enc->write      = write;
     enc->read       = read;

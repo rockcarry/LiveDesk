@@ -24,6 +24,11 @@ typedef struct {
     pthread_t       thread;
 } ALAWENC;
 
+static int getinfo(void *ctxt, char *name, uint8_t *buf, int len)
+{
+    return -1;
+}
+
 static void uninit(void *ctxt)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
@@ -148,6 +153,7 @@ CODEC* alawenc_init(void)
     if (!enc) return NULL;
 
     strncpy(enc->name, "alawenc", sizeof(enc->name));
+    enc->getinfo    = getinfo;
     enc->uninit     = uninit;
     enc->write      = write;
     enc->read       = read;

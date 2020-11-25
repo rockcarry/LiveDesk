@@ -18,11 +18,12 @@ typedef void (*PFN_CODEC_CALLBACK)(void *ctxt, void *buf[8], int len[8]);
 #define CODEC_INTERFACE_FUNCS \
     char    name[8]; \
     uint8_t info[8]; \
-    void (*uninit)(void *ctxt); \
-    void (*write )(void *ctxt, void *buf[8], int len[8]); \
-    int  (*read  )(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout); \
-    void (*start )(void *ctxt, int start); \
-    void (*reset )(void *ctxt, int type ); \
+    int  (*getinfo)(void *ctxt, char *name, uint8_t *buf, int len); \
+    void (*uninit )(void *ctxt); \
+    void (*write  )(void *ctxt, void *buf[8], int len[8]); \
+    int  (*read   )(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout); \
+    void (*start  )(void *ctxt, int start); \
+    void (*reset  )(void *ctxt, int type ); \
     void (*obuflock  )(void *ctxt, uint8_t **pbuf, int *max, int *head, int *tail, int *size); \
     void (*obufunlock)(void *ctxt, int head, int tail, int size);
 
@@ -34,6 +35,7 @@ CODEC* alawenc_init(void);
 CODEC* aacenc_init (int channels, int samplerate, int bitrate);
 CODEC* h264enc_init(int frate, int w, int h, int bitrate);
 
+#define codec_getinfo(codec, name, buf, len)       (codec)->getinfo(codec, name, buf, len)
 #define codec_uninit(codec)                        (codec)->uninit(codec)
 #define codec_write(codec, buf, len)               (codec)->write(codec, buf, len)
 #define codec_read(codec, buf, len, fsize, key, t) (codec)->read(codec, buf, len, fsize, key, t)
