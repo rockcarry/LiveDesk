@@ -571,6 +571,43 @@ void ffrdp_update(void *ctxt)
     }
 }
 
+void ffrdp_flush(void *ctxt)
+{
+    FFRDPCONTEXT *ffrdp = (FFRDPCONTEXT*)ctxt;
+    if (ffrdp) ffrdp->flags |= FLAG_FLUSH;
+}
+
+void ffrdp_dump(void *ctxt)
+{
+    FFRDPCONTEXT *ffrdp = (FFRDPCONTEXT*)ctxt;
+    if (!ctxt) return;
+    printf("rttm: %u, rtts: %u, rttd: %u, rto: %u\n", ffrdp->rttm, ffrdp->rtts, ffrdp->rttd, ffrdp->rto);
+    printf("recv_size           : %d\n"  , ffrdp->recv_size           );
+    printf("flags               : %x\n"  , ffrdp->flags               );
+    printf("send_seq            : %u\n"  , ffrdp->send_seq            );
+    printf("recv_seq            : %u\n"  , ffrdp->recv_seq            );
+    printf("wait_snd            : %u\n"  , ffrdp->wait_snd            );
+    printf("swnd, cwnd, ssthresh: %u, %u, %u\n", ffrdp->swnd, ffrdp->cwnd, ffrdp->ssthresh);
+    printf("tick_query_rwnd     : %u\n"  , ffrdp->tick_query_rwnd     );
+    printf("counter_send_1sttime: %u\n"  , ffrdp->counter_send_1sttime);
+    printf("counter_send_failed : %u\n"  , ffrdp->counter_send_failed );
+    printf("counter_send_poll   : %u\n"  , ffrdp->counter_send_poll   );
+    printf("counter_resend_rto  : %u\n"  , ffrdp->counter_resend_rto  );
+    printf("counter_resend_fast : %u\n"  , ffrdp->counter_resend_fast );
+    printf("counter_resend_ratio: %.2f%%\n", 100.0 * (ffrdp->counter_resend_rto + ffrdp->counter_resend_fast) / ffrdp->counter_send_1sttime);
+    printf("counter_reach_maxrto: %u\n"  , ffrdp->counter_reach_maxrto);
+    printf("fec_txseq           : %d\n"  , ffrdp->fec_txseq           );
+    printf("fec_rxseq           : %d\n"  , ffrdp->fec_rxseq           );
+    printf("fec_rxmask          : %08x\n", ffrdp->fec_rxmask          );
+    printf("counter_fec_tx_short: %u\n"  , ffrdp->counter_fec_tx_short);
+    printf("counter_fec_tx_full : %u\n"  , ffrdp->counter_fec_tx_full );
+    printf("counter_fec_rx_short: %u\n"  , ffrdp->counter_fec_rx_short);
+    printf("counter_fec_rx_full : %u\n"  , ffrdp->counter_fec_rx_full );
+    printf("counter_fec_ok      : %u\n"  , ffrdp->counter_fec_ok      );
+    printf("counter_fec_failed  : %u\n"  , ffrdp->counter_fec_failed  );
+    printf("\r\n");
+}
+
 typedef struct {
     #define TS_EXIT             (1 << 0)
     #define TS_START            (1 << 1)
@@ -622,7 +659,7 @@ static void* ffrdps_thread_proc(void *argv)
         if (!(ffrdps->status & TS_START)) { usleep(100*1000); continue; }
 
         if (!ffrdps->ffrdp) {
-            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port, 1, 10);
+            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port, 1, 0);
             if (!ffrdps->ffrdp) { usleep(100*1000); continue; }
         }
 
@@ -734,4 +771,11 @@ void ffrdps_start(void *ctxt, int start)
     } else {
         ffrdps->status &=~TS_START;
     }
+}
+
+void ffrdps_dump(void *ctxt)
+{
+    FFRDPS *ffrdps = ctxt;
+    if (!ctxt) return;
+    ffrdp_dump(ffrdps->ffrdp);
 }
