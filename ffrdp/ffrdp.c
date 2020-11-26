@@ -238,7 +238,7 @@ static int ffrdp_send_data_frame(FFRDPCONTEXT *ffrdp, FFRDP_FRAME_NODE *frame, s
         uint32_t *psrc = (uint32_t*)frame->data, *pdst = (uint32_t*)ffrdp->fec_txbuf, i;
         *(uint16_t*)(frame->data + 4 + FFRDP_MTU_SIZE) = (uint16_t)ffrdp->fec_txseq;
         sendto(ffrdp->udp_fd, frame->data, frame->size, 0, (struct sockaddr*)dstaddr, sizeof(struct sockaddr_in));
-        ffrdp->counter_fec_tx_full++;
+        ffrdp->fec_txseq++; ffrdp->counter_fec_tx_full++;
         for (i=0; i<(4+FFRDP_MTU_SIZE)/sizeof(uint32_t); i++) *pdst++ ^= *psrc++; // make xor fec frame
         if (ffrdp->fec_txseq % ffrdp->fec_redundancy == ffrdp->fec_redundancy - 1) {
             *(uint16_t*)(ffrdp->fec_txbuf + 4 + FFRDP_MTU_SIZE) = ffrdp->fec_txseq++;
