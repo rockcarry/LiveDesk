@@ -141,8 +141,10 @@ int main(int argc, char *argv[])
             printf("rtmp push paused !\n");
         } else if (rectype == 3 && stricmp(cmd, "avkcpc_start") == 0) {
             if (live->avkcpc == NULL) live->avkcpc = avkcpc_init("127.0.0.1", avkcpport, NULL, NULL);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump") == 0) {
-            if (live->ffrdps) ffrdps_dump(live->ffrdps);
+        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump0") == 0) {
+            if (live->ffrdps) ffrdps_dump(live->ffrdps, 0);
+        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump1") == 0) {
+            if (live->ffrdps) ffrdps_dump(live->ffrdps, 1);
         } else if (stricmp(cmd, "help") == 0) {
             printf("\nlivedesk v1.0.0\n\n");
             printf("available commmand:\n");
