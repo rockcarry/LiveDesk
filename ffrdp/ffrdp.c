@@ -626,11 +626,24 @@ void ffrdp_dump(void *ctxt, int clearhistory)
     }
 }
 
+int ffrdp_qos(void *ctxt)
+{
+    int resend_ratio;
+    FFRDPCONTEXT *ffrdp = (FFRDPCONTEXT*)ctxt; int secs;
+    if (!ctxt) return 0;
+    resend_ratio = 100 * (ffrdp->counter_resend_rto + ffrdp->counter_resend_fast) / MAX(ffrdp->counter_send_1sttime, 1);
+    ffrdp->counter_resend_rto = ffrdp->counter_resend_fast = ffrdp->counter_reach_maxrto = 0;
+    if (ffrdp->rto > 100 && ffrdp->wait_snd > 25) return -1;
+    if (ffrdp->rto < 55  && ffrdp->wait_snd < 3  && resend_ratio < 5) return  1;
+    return 0;
+}
+
 typedef struct {
     #define TS_EXIT             (1 << 0)
     #define TS_START            (1 << 1)
     #define TS_CLIENT_CONNECTED (1 << 2)
     #define TS_KEYFRAME_DROPPED (1 << 3)
+    #define TS_ADAPTIVE_BITRATE (1 << 4)
     uint32_t  status;
     pthread_t pthread;
 
@@ -645,6 +658,13 @@ typedef struct {
 
     char      avinfostr[256];
     uint8_t   buff[2 * 1024 * 1024];
+
+    #define MAX_BITRATE_LIST_SIZE  100
+    int       bitrate_list_buf[MAX_BITRATE_LIST_SIZE];
+    int       bitrate_list_size;
+    int       bitrate_cur_idx;
+    uint32_t  cnt_drop_frame;
+    uint32_t  tick_qos_check;
 } FFRDPS;
 
 static int ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len)
@@ -722,6 +742,7 @@ static void* ffrdps_thread_proc(void *argv)
                     ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize);
                     if (ret == 0 && keyframe) ffrdps->status &=~TS_KEYFRAME_DROPPED;
                     if (ret != 0 && keyframe) ffrdps->status |= TS_KEYFRAME_DROPPED;
+                    if (ret != 0) ffrdps->cnt_drop_frame++;
                 }
             }
         }
@@ -735,6 +756,19 @@ static void* ffrdps_thread_proc(void *argv)
             vdev_start (ffrdps->vdev, 0);
             ffrdp_free(ffrdps->ffrdp); ffrdps->ffrdp = NULL;
             ffrdps->status &= ~TS_CLIENT_CONNECTED;
+        }
+
+        if ((ffrdps->status & TS_CLIENT_CONNECTED) && (ffrdps->status & TS_ADAPTIVE_BITRATE) && (int32_t)get_tick_count() - (int32_t)ffrdps->tick_qos_check > 1000) {
+            int last_idx = ffrdps->bitrate_cur_idx, qos = ffrdp_qos(ffrdps->ffrdp);
+            if (ffrdps->cnt_drop_frame > 0 || qos < 0) {
+                ffrdps->bitrate_cur_idx = MAX(ffrdps->bitrate_cur_idx - 1, 0);
+            } else if (ffrdps->cnt_drop_frame == 0 && qos > 0) {
+                ffrdps->bitrate_cur_idx = MIN(ffrdps->bitrate_cur_idx + 1, ffrdps->bitrate_list_size - 1);
+            }
+            if (ffrdps->bitrate_cur_idx != last_idx) {
+                ffrdps_reconfig_bitrate(ffrdps, ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
+            }
+            ffrdps->tick_qos_check = get_tick_count();
         }
     }
 
@@ -796,4 +830,37 @@ void ffrdps_dump(void *ctxt, int clearhistory)
     FFRDPS *ffrdps = ctxt;
     if (!ctxt) return;
     ffrdp_dump(ffrdps->ffrdp, clearhistory);
+    printf("adaptive_bitrate    : %s\n",(ffrdps->status & TS_ADAPTIVE_BITRATE) ? "enable" : "disable");
+    printf("cnt_drop_frame      : %d\n", ffrdps->cnt_drop_frame );
+    printf("bitrate_cur_idx     : %d\n", ffrdps->bitrate_cur_idx);
+    printf("bitrate_cur_val     : %d\n", ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
+}
+
+void ffrdps_reconfig_bitrate(void *ctxt, int bitrate)
+{
+    FFRDPS *ffrdps = ctxt;
+    if (!ctxt) return;
+    h264enc_reconfig(ffrdps->venc, bitrate);
+}
+
+void ffrdps_adaptive_bitrate_setup(void *ctxt, int *blist, int n)
+{
+    FFRDPS *ffrdps = ctxt;
+    if (!ctxt) return;
+    ffrdps->bitrate_list_size = MIN(n, MAX_BITRATE_LIST_SIZE);
+    memcpy(ffrdps->bitrate_list_buf, blist, ffrdps->bitrate_list_size * sizeof(int));
+}
+
+void ffrdps_adaptive_bitrate_enable(void *ctxt, int en)
+{
+    FFRDPS *ffrdps = ctxt;
+    if (!ctxt) return;
+    ffrdps->bitrate_cur_idx= ffrdps->bitrate_list_size / 2;
+    h264enc_reconfig(ffrdps->venc, ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
+    if (en && ffrdps->bitrate_list_size > 0) {
+        ffrdps->tick_qos_check = get_tick_count();
+        ffrdps->status |= TS_ADAPTIVE_BITRATE;
+    } else {
+        ffrdps->status &=~TS_ADAPTIVE_BITRATE;
+    }
 }
