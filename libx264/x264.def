@@ -5,5 +5,6 @@ EXPORTS
     x264_picture_init
     x264_encoder_open_161
     x264_encoder_headers
+    x264_encoder_reconfig
     x264_encoder_encode
     x264_encoder_close

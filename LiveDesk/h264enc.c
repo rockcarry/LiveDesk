@@ -16,6 +16,7 @@
 typedef struct {
     CODEC_INTERFACE_FUNCS
 
+    x264_param_t param;
     x264_t  *x264;
     int      iw;
     int      ih;
@@ -277,7 +278,7 @@ static void obufunlock(void *ctxt, int head, int tail, int size)
 
 CODEC* h264enc_init(int frate, int w, int h, int bitrate)
 {
-    x264_param_t param; int i;
+    int      i;
     H264ENC *enc = calloc(1, sizeof(H264ENC) + (w * h * 3 / 2) * YUV_BUF_NUM);
     if (!enc) return NULL;
 
@@ -297,43 +298,57 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     pthread_mutex_init(&enc->omutex, NULL);
     pthread_cond_init (&enc->ocond , NULL);
 
-    x264_param_default_preset(&param, "ultrafast", "zerolatency");
-    x264_param_apply_profile (&param, "baseline");
-    param.i_csp            = X264_CSP_I420;
-    param.i_width          = w;
-    param.i_height         = h;
-    param.i_fps_num        = frate;
-    param.i_fps_den        = 1;
-//  param.i_slice_count_max= 1;
-//  param.i_threads        = 1;
-    param.i_keyint_min     = frate * 2;
-    param.i_keyint_max     = frate * 5;
-    param.rc.i_bitrate     = bitrate / 1000;
+    x264_param_default_preset(&enc->param, "ultrafast", "zerolatency");
+    x264_param_apply_profile (&enc->param, "baseline");
+    enc->param.i_csp            = X264_CSP_I420;
+    enc->param.i_width          = w;
+    enc->param.i_height         = h;
+    enc->param.i_fps_num        = frate;
+    enc->param.i_fps_den        = 1;
+//  enc->param.i_slice_count_max= 1;
+//  enc->param.i_threads        = 1;
+    enc->param.i_keyint_min     = frate * 2;
+    enc->param.i_keyint_max     = frate * 5;
+    enc->param.rc.i_bitrate     = bitrate / 1000;
 #if 0 // X264_RC_CQP
-    param.rc.i_rc_method       = X264_RC_CQP;
-    param.rc.i_qp_constant     = 35;
-    param.rc.i_qp_min          = 25;
-    param.rc.i_qp_max          = 50;
+    enc->param.rc.i_rc_method       = X264_RC_CQP;
+    enc->param.rc.i_qp_constant     = 35;
+    enc->param.rc.i_qp_min          = 25;
+    enc->param.rc.i_qp_max          = 50;
 #endif
 #if 0 // X264_RC_CRF
-    param.rc.i_rc_method       = X264_RC_CRF;
-    param.rc.f_rf_constant     = 25;
-    param.rc.f_rf_constant_max = 50;
+    enc->param.rc.i_rc_method       = X264_RC_CRF;
+    enc->param.rc.f_rf_constant     = 25;
+    enc->param.rc.f_rf_constant_max = 50;
 #endif
 #if 1 // X264_RC_ABR
-    param.rc.i_rc_method       = X264_RC_ABR;
-    param.rc.f_rate_tolerance  = 2;
-    param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
+    enc->param.rc.i_rc_method       = X264_RC_ABR;
+    enc->param.rc.f_rate_tolerance  = 2;
+    enc->param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
+    enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
 #endif
-    param.i_timebase_num   = 1;
-    param.i_timebase_den   = 1000;
-    param.b_repeat_headers = 1;
+    enc->param.i_timebase_num   = 1;
+    enc->param.i_timebase_den   = 1000;
+    enc->param.b_repeat_headers = 1;
     enc->ow   = w;
     enc->oh   = h;
-    enc->x264 = x264_encoder_open(&param);
+    enc->x264 = x264_encoder_open(&enc->param);
     for (i=0; i<YUV_BUF_NUM; i++) {
         enc->ibuff[i] = (uint8_t*)enc + sizeof(H264ENC) + i * (w * h * 3 / 2);
     }
     pthread_create(&enc->thread, NULL, venc_encode_thread_proc, enc);
     return (CODEC*)enc;
+}
+
+void h264enc_reconfig(CODEC *codec, int bitrate)
+{
+    H264ENC *enc = (H264ENC*)codec;
+    int      ret;
+    enc->param.rc.i_bitrate         = bitrate / 1000;
+    enc->param.rc.i_rc_method       = X264_RC_ABR;
+    enc->param.rc.f_rate_tolerance  = 2;
+    enc->param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
+    enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
+    ret = x264_encoder_reconfig(enc->x264, &enc->param);
+    printf("x264_encoder_reconfig bitrate: %d\n", bitrate);
 }

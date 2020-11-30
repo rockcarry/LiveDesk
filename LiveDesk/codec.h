@@ -34,6 +34,7 @@ typedef struct {
 CODEC* alawenc_init(void);
 CODEC* aacenc_init (int channels, int samplerate, int bitrate);
 CODEC* h264enc_init(int frate, int w, int h, int bitrate);
+void   h264enc_reconfig(CODEC *codec, int bitrate);
 
 #define codec_getinfo(codec, name, buf, len)       (codec)->getinfo(codec, name, buf, len)
 #define codec_uninit(codec)                        (codec)->uninit(codec)
