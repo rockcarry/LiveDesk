@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
     int       duration = 60000;
     int       avkcpport= 8000;
     int       ffrdpport= 8000;
+    int       ffrdpauto= 0; // ffrdp auto bitrate (adaptive bitrate)
     char      recpath[256] = "livedesk";
     void     *avkcpc = NULL;
 
@@ -66,7 +67,11 @@ int main(int argc, char *argv[])
         } else if (strstr(argv[i], "-framerate=") == argv[i]) {
             framerate = atoi(argv[i] + 11);
         } else if (strstr(argv[i], "-vbitrate=") == argv[i]) {
-            vbitrate  = atoi(argv[i] + 10);
+            if (strcmp(argv[i] + 10, "auto") == 0) {
+                vbitrate = 10000000; ffrdpauto = 1;
+            } else {
+                vbitrate = atoi(argv[i] + 10);
+            }
         } else if (strstr(argv[i], "-rtsp=") == argv[i]) {
             rectype = 0; strncpy(recpath, argv[i] + 6, sizeof(recpath));
         } else if (strstr(argv[i], "-rtmp=") == argv[i]) {
@@ -121,6 +126,12 @@ int main(int argc, char *argv[])
     case 4: live->ffrdps= ffrdps_init(ffrdpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
+    if (rectype == 4 && ffrdpauto) { // setup adaptive bitrate list
+        int blist[16] = { 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1500000, 2000000, 2500000 };
+        ffrdps_adaptive_bitrate_setup (live->ffrdps, blist, 12);
+        ffrdps_adaptive_bitrate_enable(live->ffrdps, 1);
+    }
+
     printf("\n\ntype help for more infomation and command.\n\n");
     while (!(live->status & TS_EXIT)) {
         char cmd[256];
@@ -141,10 +152,15 @@ int main(int argc, char *argv[])
             printf("rtmp push paused !\n");
         } else if (rectype == 3 && stricmp(cmd, "avkcpc_start") == 0) {
             if (live->avkcpc == NULL) live->avkcpc = avkcpc_init("127.0.0.1", avkcpport, NULL, NULL);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump0") == 0) {
-            if (live->ffrdps) ffrdps_dump(live->ffrdps, 0);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump1") == 0) {
-            if (live->ffrdps) ffrdps_dump(live->ffrdps, 1);
+        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump") == 0) {
+            int val; scanf("%d", &val);
+            if (live->ffrdps) ffrdps_dump(live->ffrdps, val);
+        } else if (rectype == 4 && stricmp(cmd, "ffrdps_adaptive_bitrate_en") == 0) {
+            int val; scanf("%d", &val);
+            if (live->ffrdps) ffrdps_adaptive_bitrate_enable(live->ffrdps, val);
+        } else if (rectype == 4 && stricmp(cmd, "ffrdps_reconfig_bitrate") == 0) {
+            int val; scanf("%d", &val);
+            if (live->ffrdps) ffrdps_reconfig_bitrate(live->ffrdps, val);
         } else if (stricmp(cmd, "help") == 0) {
             printf("\nlivedesk v1.0.0\n\n");
             printf("available commmand:\n");
