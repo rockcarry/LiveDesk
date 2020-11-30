@@ -664,6 +664,7 @@ typedef struct {
     int       bitrate_list_size;
     int       bitrate_cur_idx;
     uint32_t  cnt_drop_frame;
+    uint32_t  cnt_qos_increase;
     uint32_t  tick_qos_check;
 } FFRDPS;
 
@@ -762,8 +763,12 @@ static void* ffrdps_thread_proc(void *argv)
             int last_idx = ffrdps->bitrate_cur_idx, qos = ffrdp_qos(ffrdps->ffrdp);
             if (ffrdps->cnt_drop_frame > 0 || qos < 0) {
                 ffrdps->bitrate_cur_idx = MAX(ffrdps->bitrate_cur_idx - 1, 0);
+                ffrdps->cnt_qos_increase= 0;
             } else if (ffrdps->cnt_drop_frame == 0 && qos > 0) {
-                ffrdps->bitrate_cur_idx = MIN(ffrdps->bitrate_cur_idx + 1, ffrdps->bitrate_list_size - 1);
+                if (ffrdps->cnt_qos_increase == 3) {
+                    ffrdps->bitrate_cur_idx  = MIN(ffrdps->bitrate_cur_idx + 1, ffrdps->bitrate_list_size - 1);
+                    ffrdps->cnt_qos_increase = 0;
+                } else ffrdps->cnt_qos_increase++;
             }
             if (ffrdps->bitrate_cur_idx != last_idx) {
                 ffrdps_reconfig_bitrate(ffrdps, ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
