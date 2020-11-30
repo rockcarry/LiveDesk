@@ -114,25 +114,6 @@ static void* venc_encode_thread_proc(void *param)
     return NULL;
 }
 
-static int getinfo(void *ctxt, char *name, uint8_t *buf, int len)
-{
-    x264_nal_t *nals;
-    int         t, n, i;
-    H264ENC *enc = (H264ENC*)ctxt;
-    if (!ctxt) return -1;
-    if      (strcmp(name, "sps") == 0) t = NAL_SPS;
-    else if (strcmp(name, "pps") == 0) t = NAL_PPS;
-    else return -1;
-    x264_encoder_headers(enc->x264, &nals, &n);
-    for (i=0; i<n; i++) {
-        if (nals[i].i_type == t && nals[i].i_payload < len) {
-            memcpy(buf, nals[i].p_payload, nals[i].i_payload);
-            return nals[i].i_payload;
-        }
-    }
-    return -1;
-}
-
 static void uninit(void *ctxt)
 {
     H264ENC *enc = (H264ENC*)ctxt;
@@ -283,7 +264,6 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "h264enc", sizeof(enc->name));
-    enc->getinfo    = getinfo;
     enc->uninit     = uninit;
     enc->write      = write;
     enc->read       = read;
@@ -338,6 +318,25 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     }
     pthread_create(&enc->thread, NULL, venc_encode_thread_proc, enc);
     return (CODEC*)enc;
+}
+
+int h264enc_getinfo(void *ctxt, char *name, uint8_t *buf, int len)
+{
+    x264_nal_t *nals;
+    int         t, n, i;
+    H264ENC *enc = (H264ENC*)ctxt;
+    if (!ctxt) return -1;
+    if      (strcmp(name, "sps") == 0) t = NAL_SPS;
+    else if (strcmp(name, "pps") == 0) t = NAL_PPS;
+    else return -1;
+    x264_encoder_headers(enc->x264, &nals, &n);
+    for (i=0; i<n; i++) {
+        if (nals[i].i_type == t && nals[i].i_payload < len) {
+            memcpy(buf, nals[i].p_payload, nals[i].i_payload);
+            return nals[i].i_payload;
+        }
+    }
+    return -1;
 }
 
 void h264enc_reconfig(CODEC *codec, int bitrate)

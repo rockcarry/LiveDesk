@@ -188,8 +188,8 @@ static void* avkcps_thread_proc(void *argv)
                 codec_start(avkcps->venc, 1);
                 adev_start (avkcps->adev, 1);
                 vdev_start (avkcps->vdev, 1);
-                spslen = codec_getinfo(avkcps->venc, "sps", spsbuf, sizeof(spsbuf));
-                ppslen = codec_getinfo(avkcps->venc, "pps", ppsbuf, sizeof(ppsbuf));
+                spslen = h264enc_getinfo(avkcps->venc, "sps", spsbuf, sizeof(spsbuf));
+                ppslen = h264enc_getinfo(avkcps->venc, "pps", ppsbuf, sizeof(ppsbuf));
                 buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
                 buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
                 snprintf(avkcps->avinfostr+sizeof(uint32_t), sizeof(avkcps->avinfostr)-sizeof(uint32_t),

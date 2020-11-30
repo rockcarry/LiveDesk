@@ -629,7 +629,7 @@ void ffrdp_dump(void *ctxt, int clearhistory)
 int ffrdp_qos(void *ctxt)
 {
     int resend_ratio;
-    FFRDPCONTEXT *ffrdp = (FFRDPCONTEXT*)ctxt; int secs;
+    FFRDPCONTEXT *ffrdp = (FFRDPCONTEXT*)ctxt;
     if (!ctxt) return 0;
     resend_ratio = 100 * (ffrdp->counter_resend_rto + ffrdp->counter_resend_fast) / MAX(ffrdp->counter_send_1sttime, 1);
     ffrdp->counter_resend_rto = ffrdp->counter_resend_fast = ffrdp->counter_reach_maxrto = 0;
@@ -713,8 +713,8 @@ static void* ffrdps_thread_proc(void *argv)
                 codec_start(ffrdps->venc, 1);
                 adev_start (ffrdps->adev, 1);
                 vdev_start (ffrdps->vdev, 1);
-                spslen = codec_getinfo(ffrdps->venc, "sps", spsbuf, sizeof(spsbuf));
-                ppslen = codec_getinfo(ffrdps->venc, "pps", ppsbuf, sizeof(ppsbuf));
+                spslen = h264enc_getinfo(ffrdps->venc, "sps", spsbuf, sizeof(spsbuf));
+                ppslen = h264enc_getinfo(ffrdps->venc, "pps", ppsbuf, sizeof(ppsbuf));
                 buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
                 buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
                 snprintf(ffrdps->avinfostr+sizeof(uint32_t), sizeof(ffrdps->avinfostr)-sizeof(uint32_t),

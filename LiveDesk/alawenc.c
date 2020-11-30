@@ -153,7 +153,6 @@ CODEC* alawenc_init(void)
     if (!enc) return NULL;
 
     strncpy(enc->name, "alawenc", sizeof(enc->name));
-    enc->getinfo    = getinfo;
     enc->uninit     = uninit;
     enc->write      = write;
     enc->read       = read;

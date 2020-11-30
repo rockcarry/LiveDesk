@@ -200,7 +200,6 @@ CODEC* aacenc_init(int channels, int samplerate, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "aacenc", sizeof(enc->name));
-    enc->getinfo    = getinfo;
     enc->uninit     = uninit;
     enc->write      = write;
     enc->read       = read;
