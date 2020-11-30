@@ -663,7 +663,6 @@ typedef struct {
     int       bitrate_list_buf[MAX_BITRATE_LIST_SIZE];
     int       bitrate_list_size;
     int       bitrate_cur_idx;
-    uint32_t  cnt_drop_frame;
     uint32_t  cnt_qos_increase;
     uint32_t  tick_qos_check;
 } FFRDPS;
@@ -743,7 +742,6 @@ static void* ffrdps_thread_proc(void *argv)
                     ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize);
                     if (ret == 0 && keyframe) ffrdps->status &=~TS_KEYFRAME_DROPPED;
                     if (ret != 0 && keyframe) ffrdps->status |= TS_KEYFRAME_DROPPED;
-                    if (ret != 0) ffrdps->cnt_drop_frame++;
                 }
             }
         }
@@ -761,10 +759,10 @@ static void* ffrdps_thread_proc(void *argv)
 
         if ((ffrdps->status & TS_CLIENT_CONNECTED) && (ffrdps->status & TS_ADAPTIVE_BITRATE) && (int32_t)get_tick_count() - (int32_t)ffrdps->tick_qos_check > 1000) {
             int last_idx = ffrdps->bitrate_cur_idx, qos = ffrdp_qos(ffrdps->ffrdp);
-            if (ffrdps->cnt_drop_frame > 0 || qos < 0) {
+            if (qos < 0) {
                 ffrdps->bitrate_cur_idx = MAX(ffrdps->bitrate_cur_idx - 1, 0);
                 ffrdps->cnt_qos_increase= 0;
-            } else if (ffrdps->cnt_drop_frame == 0 && qos > 0) {
+            } else if (qos > 0) {
                 if (ffrdps->cnt_qos_increase == 3) {
                     ffrdps->bitrate_cur_idx  = MIN(ffrdps->bitrate_cur_idx + 1, ffrdps->bitrate_list_size - 1);
                     ffrdps->cnt_qos_increase = 0;
@@ -835,10 +833,6 @@ void ffrdps_dump(void *ctxt, int clearhistory)
     FFRDPS *ffrdps = ctxt;
     if (!ctxt) return;
     ffrdp_dump(ffrdps->ffrdp, clearhistory);
-    printf("adaptive_bitrate    : %s\n",(ffrdps->status & TS_ADAPTIVE_BITRATE) ? "enable" : "disable");
-    printf("cnt_drop_frame      : %d\n", ffrdps->cnt_drop_frame );
-    printf("bitrate_cur_idx     : %d\n", ffrdps->bitrate_cur_idx);
-    printf("bitrate_cur_val     : %d\n", ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
 }
 
 void ffrdps_reconfig_bitrate(void *ctxt, int bitrate)
