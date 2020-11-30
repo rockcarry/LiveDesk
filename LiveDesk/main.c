@@ -127,8 +127,8 @@ int main(int argc, char *argv[])
     }
 
     if (rectype == 4 && ffrdpauto) { // setup adaptive bitrate list
-        int blist[16] = { 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1500000, 2000000, 2500000 };
-        ffrdps_adaptive_bitrate_setup (live->ffrdps, blist, 12);
+        int blist[16] = { 250000, 500000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000, 2100000, 2200000, 2300000, 2400000, 2500000, 2600000, 2700000 };
+        ffrdps_adaptive_bitrate_setup (live->ffrdps, blist, 15);
         ffrdps_adaptive_bitrate_enable(live->ffrdps, 1);
     }
 
