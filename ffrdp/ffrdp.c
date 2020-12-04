@@ -41,7 +41,7 @@ static uint32_t get_tick_count()
 
 #define FFRDP_MAX_MSS       (1500 - 8) // should align to 4 bytes and <= 1500 - 8
 #define FFRDP_MIN_RTO        50
-#define FFRDP_MAX_RTO        1000
+#define FFRDP_MAX_RTO        2000
 #define FFRDP_MAX_WAITSND    2048
 #define FFRDP_QUERY_CYCLE    500
 #define FFRDP_FLUSH_TIMEOUT  500
@@ -110,16 +110,6 @@ typedef struct {
     uint32_t tick_recv_ack;
     uint32_t tick_send_query;
     uint32_t tick_ffrdp_dump;
-    uint32_t counter_send_bytes;
-    uint32_t counter_recv_bytes;
-    uint32_t counter_send_1sttime;
-    uint32_t counter_send_failed;
-    uint32_t counter_send_query;
-    uint32_t counter_resend_fast;
-    uint32_t counter_resend_rto;
-    uint32_t counter_reach_maxrto;
-    uint32_t counter_full;
-    uint32_t counter_short;
 
     uint8_t  fec_txbuf[4 + FFRDP_MAX_MSS + 2];
     uint8_t  fec_rxbuf[4 + FFRDP_MAX_MSS + 2];
@@ -128,10 +118,22 @@ typedef struct {
     uint16_t fec_rxseq;
     uint16_t fec_rxcnt;
     uint32_t fec_rxmask;
+
+    uint32_t counter_send_bytes;
+    uint32_t counter_recv_bytes;
+    uint32_t counter_send_1sttime;
+    uint32_t counter_send_failed;
+    uint32_t counter_send_query;
+    uint32_t counter_resend_fast;
+    uint32_t counter_resend_rto;
+    uint32_t counter_reach_maxrto;
+    uint32_t counter_txfull , counter_rxfull ;
+    uint32_t counter_txshort, counter_rxshort;
     uint32_t counter_fec_tx;
     uint32_t counter_fec_rx;
     uint32_t counter_fec_ok;
     uint32_t counter_fec_failed;
+    uint32_t reserved;
 } FFRDPCONTEXT;
 
 static uint32_t ringbuf_write(uint8_t *rbuf, uint32_t maxsize, uint32_t tail, uint8_t *src, uint32_t len)
@@ -239,9 +241,9 @@ static int ffrdp_sleep(FFRDPCONTEXT *ffrdp, int flag)
 static int ffrdp_send_data_frame(FFRDPCONTEXT *ffrdp, FFRDP_FRAME_NODE *frame, struct sockaddr_in *dstaddr)
 {
     switch (frame->size - ffrdp->smss) {
-    case 6 : ffrdp->counter_fec_tx++; *(uint16_t*)(frame->data + 4 + ffrdp->smss) = ffrdp->fec_txseq++; break; // tx fec frame
-    case 4 : ffrdp->counter_full++  ; break; // tx full  frame
-    default: ffrdp->counter_short++ ; break; // tx short frame
+    case 6 : ffrdp->counter_fec_tx ++; *(uint16_t*)(frame->data + 4 + ffrdp->smss) = ffrdp->fec_txseq++; break; // tx fec frame
+    case 4 : ffrdp->counter_txfull ++; break; // tx full  frame
+    default: ffrdp->counter_txshort++; break; // tx short frame
     }
     if (sendto(ffrdp->udp_fd, frame->data, frame->size, 0, (struct sockaddr*)dstaddr, sizeof(struct sockaddr_in)) != frame->size) return -1;
     if (frame->size == 4 + ffrdp->smss + 2) { // fec frame
@@ -261,9 +263,9 @@ static int ffrdp_recv_data_frame(FFRDPCONTEXT *ffrdp, FFRDP_FRAME_NODE *frame)
 {
     uint32_t fecseq, fecrdc, *psrc, *pdst, type, i;
     switch (frame->data[0]) {
-    case FFRDP_FRAME_TYPE_SHORT: ffrdp->counter_short++ ; return 0; // short frame
-    case FFRDP_FRAME_TYPE_FULL : ffrdp->counter_full ++ ; ffrdp->rmss = frame->size - 4; return 0; // full frame
-    default:                     ffrdp->counter_fec_rx++; ffrdp->rmss = frame->size - 6; break;    // fec  frame
+    case FFRDP_FRAME_TYPE_SHORT: ffrdp->counter_rxshort++; return 0; // short frame
+    case FFRDP_FRAME_TYPE_FULL : ffrdp->counter_rxfull ++; ffrdp->rmss = frame->size - 4; return 0; // full frame
+    default:                     ffrdp->counter_fec_rx ++; ffrdp->rmss = frame->size - 6; break;    // fec  frame
     }
     fecseq = *(uint16_t*)(frame->data + frame->size - 2);
     fecrdc = frame->data[0];
@@ -621,18 +623,17 @@ void ffrdp_dump(void *ctxt, int clearhistory)
     printf("counter_resend_fast : %u\n"  , ffrdp->counter_resend_fast );
     printf("counter_resend_ratio: %.2f%%\n", 100.0 * (ffrdp->counter_resend_rto + ffrdp->counter_resend_fast) / MAX(ffrdp->counter_send_1sttime, 1));
     printf("counter_reach_maxrto: %u\n"  , ffrdp->counter_reach_maxrto);
-    printf("counter_full        : %u\n"  , ffrdp->counter_full        );
-    printf("counter_short       : %u\n"  , ffrdp->counter_short       );
+    printf("counter_txfull      : %u\n"  , ffrdp->counter_txfull      );
+    printf("counter_txshort     : %u\n"  , ffrdp->counter_txshort     );
+    printf("counter_rxfull      : %u\n"  , ffrdp->counter_rxfull      );
+    printf("counter_rxshort     : %u\n"  , ffrdp->counter_rxshort     );
     printf("counter_fec_tx      : %u\n"  , ffrdp->counter_fec_tx      );
     printf("counter_fec_rx      : %u\n"  , ffrdp->counter_fec_rx      );
     printf("counter_fec_ok      : %u\n"  , ffrdp->counter_fec_ok      );
     printf("counter_fec_failed  : %u\n\n", ffrdp->counter_fec_failed  );
     if (secs > 1 && clearhistory) {
-        ffrdp->tick_ffrdp_dump      = get_tick_count();
-        ffrdp->counter_send_bytes   = ffrdp->counter_recv_bytes  = ffrdp-> counter_full = ffrdp-> counter_short = 0;
-        ffrdp->counter_send_1sttime = ffrdp->counter_send_failed = ffrdp->counter_send_query   = 0;
-        ffrdp->counter_resend_rto   = ffrdp->counter_resend_fast = ffrdp->counter_reach_maxrto = 0;
-        ffrdp->counter_fec_tx       = ffrdp->counter_fec_rx = ffrdp->counter_fec_ok = ffrdp->counter_fec_failed = 0;
+        ffrdp->tick_ffrdp_dump = get_tick_count();
+        memset(&ffrdp->counter_send_bytes, 0, &ffrdp->reserved - &ffrdp->counter_send_bytes);
     }
 }
 
@@ -707,7 +708,7 @@ static void* ffrdps_thread_proc(void *argv)
         if (!(ffrdps->status & TS_START)) { usleep(100*1000); continue; }
 
         if (!ffrdps->ffrdp) {
-            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port, 1, 1024, 0);
+            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port, 1, 1500, 0);
             if (!ffrdps->ffrdp) { usleep(100*1000); continue; }
         }
 
