@@ -24,11 +24,6 @@ typedef struct {
     pthread_t       thread;
 } ALAWENC;
 
-static int getinfo(void *ctxt, char *name, uint8_t *buf, int len)
-{
-    return -1;
-}
-
 static void uninit(void *ctxt)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;

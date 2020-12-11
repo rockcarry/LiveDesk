@@ -75,11 +75,6 @@ static void* aenc_encode_thread_proc(void *param)
     return NULL;
 }
 
-static int getinfo(void *ctxt, char *name, uint8_t *buf, int len)
-{
-    return -1;
-}
-
 static void uninit(void *ctxt)
 {
     AACENC *enc = (AACENC*)ctxt;
