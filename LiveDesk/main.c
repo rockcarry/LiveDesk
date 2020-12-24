@@ -52,37 +52,37 @@ int main(int argc, char *argv[])
     void     *avkcpc = NULL;
 
     for (i=1; i<argc; i++) {
-        if (strcmp(argv[i], "-aac") == 0) {
+        if (strcmp(argv[i], "--aac") == 0) {
             aenctype = 1;
-        } else if (strstr(argv[i], "-channels=") == argv[i]) {
+        } else if (strstr(argv[i], "--channels=") == argv[i]) {
             channels = atoi(argv[i] + 10);
-        } else if (strstr(argv[i], "-samplerate=") == argv[i]) {
+        } else if (strstr(argv[i], "--samplerate=") == argv[i]) {
             samplerate = atoi(argv[i] + 12);
-        } else if (strstr(argv[i], "-abitrate=") == argv[i]) {
+        } else if (strstr(argv[i], "--abitrate=") == argv[i]) {
             abitrate = atoi(argv[i] + 10);
-        } else if (strstr(argv[i], "-vwidth=") == argv[i]) {
+        } else if (strstr(argv[i], "--vwidth=") == argv[i]) {
             vwidth = atoi(argv[i] + 8);
-        } else if (strstr(argv[i], "-vheight=") == argv[i]) {
+        } else if (strstr(argv[i], "--vheight=") == argv[i]) {
             vheight = atoi(argv[i] + 9);
-        } else if (strstr(argv[i], "-framerate=") == argv[i]) {
+        } else if (strstr(argv[i], "--framerate=") == argv[i]) {
             framerate = atoi(argv[i] + 11);
-        } else if (strstr(argv[i], "-vbitrate=") == argv[i]) {
+        } else if (strstr(argv[i], "--vbitrate=") == argv[i]) {
             if (strcmp(argv[i] + 10, "auto") == 0) {
                 vbitrate = 10000000; ffrdpauto = 1;
             } else {
                 vbitrate = atoi(argv[i] + 10);
             }
-        } else if (strstr(argv[i], "-rtsp=") == argv[i]) {
+        } else if (strstr(argv[i], "--rtsp=") == argv[i]) {
             rectype = 0; strncpy(recpath, argv[i] + 6, sizeof(recpath));
-        } else if (strstr(argv[i], "-rtmp=") == argv[i]) {
+        } else if (strstr(argv[i], "--rtmp=") == argv[i]) {
             rectype = 1; strncpy(recpath, argv[i] + 6, sizeof(recpath));
-        } else if (strstr(argv[i], "-mp4=") == argv[i]) {
+        } else if (strstr(argv[i], "--mp4=") == argv[i]) {
             rectype = 2; strncpy(recpath, argv[i] + 5, sizeof(recpath));
-        } else if (strstr(argv[i], "-avkcps=") == argv[i]) {
+        } else if (strstr(argv[i], "--avkcps=") == argv[i]) {
             rectype = 3; avkcpport = atoi(argv[i] + 8);
-        } else if (strstr(argv[i], "-ffrdps=") == argv[i]) {
+        } else if (strstr(argv[i], "--ffrdps=") == argv[i]) {
             rectype = 4; ffrdpport = atoi(argv[i] + 8);
-        } else if (strstr(argv[i], "-duration=") == argv[i]) {
+        } else if (strstr(argv[i], "--duration=") == argv[i]) {
             duration = atoi(argv[i] + 10);
         }
     }
@@ -166,10 +166,11 @@ int main(int argc, char *argv[])
             printf("available commmand:\n");
             printf("- help: show this mesage.\n");
             printf("- quit: quit this program.\n");
-            printf("- mp4_start : start recording screen to mp4 files.\n");
-            printf("- mp4_pause : pause recording screen to mp4 files.\n");
-            printf("- rtmp_start: start rtmp push.\n");
-            printf("- rtmp_pause: pause rtmp push.\n\n");
+            printf("- mp4_start  : start recording screen to mp4 files.\n");
+            printf("- mp4_pause  : pause recording screen to mp4 files.\n");
+            printf("- rtmp_start : start rtmp push.\n");
+            printf("- rtmp_pause : pause rtmp push.\n");
+            printf("- ffrdps_dump: dump ffrdps server.\n\n");
         }
     }
 
