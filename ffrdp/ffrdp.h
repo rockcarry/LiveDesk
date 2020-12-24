@@ -1,13 +1,15 @@
 #ifndef __FFRDP_H__
 #define __FFRDP_H__
 
-void* ffrdps_init (int port, int channels, int samprate, int width, int height, int frate, void *adev, void *vdev, CODEC *aenc, CODEC *venc);
-void  ffrdps_exit (void *ctxt);
-void  ffrdps_start(void *ctxt, int start);
-void  ffrdps_dump (void *ctxt, int clearhistory);
-void  ffrdps_reconfig_bitrate(void *ctxt, int bitrate);
-void  ffrdps_adaptive_bitrate_setup (void *ctxt, int *blist, int n);
-void  ffrdps_adaptive_bitrate_enable(void *ctxt, int en);
+void* ffrdp_init  (char *ip, int port, int server, int smss, int sfec);
+void  ffrdp_free  (void *ctxt);
+int   ffrdp_send  (void *ctxt, char *buf, int len);
+int   ffrdp_recv  (void *ctxt, char *buf, int len);
+int   ffrdp_isdead(void *ctxt);
+void  ffrdp_update(void *ctxt);
+void  ffrdp_flush (void *ctxt);
+void  ffrdp_dump  (void *ctxt, int clearhistory);
+int   ffrdp_qos   (void *ctxt);
 
 #endif
 

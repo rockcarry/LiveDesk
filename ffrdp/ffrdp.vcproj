@@ -152,6 +152,10 @@
 				RelativePath=".\ffrdp.c"
 				>
 			</File>
+			<File
+				RelativePath=".\ffrdps.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -160,6 +164,10 @@
 			>
 			<File
 				RelativePath=".\ffrdp.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ffrdps.h"
 				>
 			</File>
 		</Filter>

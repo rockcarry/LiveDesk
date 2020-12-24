@@ -12,7 +12,7 @@
 #include "recorder.h"
 #include "avkcps.h"
 #include "avkcpc.h"
-#include "ffrdp.h"
+#include "ffrdps.h"
 #include "log.h"
 
 #ifdef WIN32
