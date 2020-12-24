@@ -36,6 +36,8 @@ typedef struct {
 
     char      avinfostr[256];
     uint8_t   buff[2 * 1024 * 1024];
+    char      txkey[32];
+    char      rxkey[32];
 
     #define MAX_BITRATE_LIST_SIZE  100
     int       bitrate_list_buf[MAX_BITRATE_LIST_SIZE];
@@ -66,6 +68,15 @@ static void buf2hexstr(char *str, int len, uint8_t *buf, int size)
     }
 }
 
+static int is_null_key(char key[32])
+{
+    int  i;
+    for (i=0; i<32; i++) {
+        if (key[i]) return 0;
+    }
+    return 1;
+}
+
 static void* ffrdps_thread_proc(void *argv)
 {
     FFRDPS  *ffrdps = (FFRDPS*)argv;
@@ -75,7 +86,10 @@ static void* ffrdps_thread_proc(void *argv)
         if (!(ffrdps->status & TS_START)) { usleep(100*1000); continue; }
 
         if (!ffrdps->ffrdp) {
-            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port, 1, 1500, 0);
+            ffrdps->ffrdp = ffrdp_init("0.0.0.0", ffrdps->port,
+                is_null_key(ffrdps->txkey) ? NULL : ffrdps->txkey,
+                is_null_key(ffrdps->rxkey) ? NULL : ffrdps->rxkey,
+                1, 1500, 0);
             if (!ffrdps->ffrdp) { usleep(100*1000); continue; }
         }
 
@@ -157,7 +171,7 @@ static void* ffrdps_thread_proc(void *argv)
     return NULL;
 }
 
-void* ffrdps_init(int port, int channels, int samprate, int width, int height, int frate, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
+void* ffrdps_init(int port, char *txkey, char *rxkey, int channels, int samprate, int width, int height, int frate, void *adev, void *vdev, CODEC *aenc, CODEC *venc)
 {
     FFRDPS *ffrdps = calloc(1, sizeof(FFRDPS));
     if (!ffrdps) {
@@ -175,6 +189,8 @@ void* ffrdps_init(int port, int channels, int samprate, int width, int height, i
     ffrdps->width    = width;
     ffrdps->height   = height;
     ffrdps->frate    = frate;
+    if (txkey) strncpy(ffrdps->txkey, txkey, sizeof(ffrdps->txkey));
+    if (rxkey) strncpy(ffrdps->rxkey, rxkey, sizeof(ffrdps->rxkey));
 
     // create server thread
     pthread_create(&ffrdps->pthread, NULL, ffrdps_thread_proc, ffrdps);

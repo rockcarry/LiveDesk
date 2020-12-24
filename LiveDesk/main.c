@@ -50,40 +50,46 @@ int main(int argc, char *argv[])
     int       ffrdpauto= 0; // ffrdp auto bitrate (adaptive bitrate)
     char      recpath[256] = "livedesk";
     void     *avkcpc = NULL;
+    char      ffrdptxkey[32] = {0};
+    char      ffrdprxkey[32] = {0};
 
     for (i=1; i<argc; i++) {
         if (strcmp(argv[i], "--aac") == 0) {
             aenctype = 1;
         } else if (strstr(argv[i], "--channels=") == argv[i]) {
-            channels = atoi(argv[i] + 10);
+            channels = atoi(argv[i] + 11);
         } else if (strstr(argv[i], "--samplerate=") == argv[i]) {
-            samplerate = atoi(argv[i] + 12);
+            samplerate = atoi(argv[i] + 13);
         } else if (strstr(argv[i], "--abitrate=") == argv[i]) {
-            abitrate = atoi(argv[i] + 10);
+            abitrate = atoi(argv[i] + 11);
         } else if (strstr(argv[i], "--vwidth=") == argv[i]) {
-            vwidth = atoi(argv[i] + 8);
+            vwidth = atoi(argv[i] + 9);
         } else if (strstr(argv[i], "--vheight=") == argv[i]) {
-            vheight = atoi(argv[i] + 9);
+            vheight = atoi(argv[i] + 10);
         } else if (strstr(argv[i], "--framerate=") == argv[i]) {
-            framerate = atoi(argv[i] + 11);
+            framerate = atoi(argv[i] + 12);
         } else if (strstr(argv[i], "--vbitrate=") == argv[i]) {
-            if (strcmp(argv[i] + 10, "auto") == 0) {
+            if (strcmp(argv[i] + 11, "auto") == 0) {
                 vbitrate = 10000000; ffrdpauto = 1;
             } else {
-                vbitrate = atoi(argv[i] + 10);
+                vbitrate = atoi(argv[i] + 11);
             }
         } else if (strstr(argv[i], "--rtsp=") == argv[i]) {
-            rectype = 0; strncpy(recpath, argv[i] + 6, sizeof(recpath));
+            rectype = 0; strncpy(recpath, argv[i] + 7, sizeof(recpath));
         } else if (strstr(argv[i], "--rtmp=") == argv[i]) {
-            rectype = 1; strncpy(recpath, argv[i] + 6, sizeof(recpath));
+            rectype = 1; strncpy(recpath, argv[i] + 7, sizeof(recpath));
         } else if (strstr(argv[i], "--mp4=") == argv[i]) {
-            rectype = 2; strncpy(recpath, argv[i] + 5, sizeof(recpath));
+            rectype = 2; strncpy(recpath, argv[i] + 6, sizeof(recpath));
         } else if (strstr(argv[i], "--avkcps=") == argv[i]) {
-            rectype = 3; avkcpport = atoi(argv[i] + 8);
+            rectype = 3; avkcpport = atoi(argv[i] + 9);
         } else if (strstr(argv[i], "--ffrdps=") == argv[i]) {
-            rectype = 4; ffrdpport = atoi(argv[i] + 8);
+            rectype = 4; ffrdpport = atoi(argv[i] + 9);
+        } else if (strstr(argv[i], "--ffrdpstxkey=") == argv[i]) {
+            strncpy(ffrdptxkey, argv[i] + 14, sizeof(ffrdptxkey));
+        } else if (strstr(argv[i], "--ffrdpsrxkey=") == argv[i]) {
+            strncpy(ffrdprxkey, argv[i] + 14, sizeof(ffrdprxkey));
         } else if (strstr(argv[i], "--duration=") == argv[i]) {
-            duration = atoi(argv[i] + 10);
+            duration = atoi(argv[i] + 11);
         }
     }
     if (rectype == 2) {
@@ -99,6 +105,8 @@ int main(int argc, char *argv[])
     printf("duration  : %d\n", duration);
     printf("avkcpport : %d\n", avkcpport);
     printf("ffrdpport : %d\n", ffrdpport);
+    printf("ffrdptxkey: %s\n", ffrdptxkey);
+    printf("ffrdprxkey: %s\n", ffrdprxkey);
     printf("aenctype  : %s\n", aenctype ? "aac" : "alaw");
     printf("channels  : %d\n", channels);
     printf("samplerate: %d\n", samplerate);
@@ -123,7 +131,7 @@ int main(int argc, char *argv[])
     case 1: live->rtmp  = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
     case 2: live->rec   = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     case 3: live->avkcps= avkcps_init(avkcpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 4: live->ffrdps= ffrdps_init(ffrdpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 4: live->ffrdps= ffrdps_init(ffrdpport, ffrdptxkey, ffrdprxkey, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     if (rectype == 4 && ffrdpauto) { // setup adaptive bitrate list

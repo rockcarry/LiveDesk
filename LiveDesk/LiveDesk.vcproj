@@ -61,9 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib libcrypto.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../pthread-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
+				AdditionalLibraryDirectories="../pthread-win32/lib;../openssl-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -91,7 +91,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\pthread-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\ffmpeg-win32\bin\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libfaac\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libx264\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\librtmp\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\pthread-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\openssl-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\ffmpeg-win32\bin\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libfaac\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libx264\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\librtmp\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -138,9 +138,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
+				AdditionalDependencies="winmm.lib ws2_32.lib pthread.lib libcrypto.lib swscale.lib faac.lib x264.lib rtmp.lib BasicUsageEnvironment.lib groupsock.lib liveMedia.lib UsageEnvironment.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="../pthread-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
+				AdditionalLibraryDirectories="../pthread-win32/lib;../openssl-win32/lib;../ffmpeg-win32/bin;../libfaac;../libx264;../live555/lib;../librtmp"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="1"
@@ -170,7 +170,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="copy &quot;$(SolutionDir)\pthread-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\ffmpeg-win32\bin\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libfaac\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libx264\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\librtmp\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
+				CommandLine="copy &quot;$(SolutionDir)\pthread-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\openssl-win32\dll\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\ffmpeg-win32\bin\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libfaac\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\libx264\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\librtmp\*.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
