@@ -94,10 +94,12 @@ static void* venc_encode_thread_proc(void *param)
         if ((enc->status & TS_KEYFRAME_DROPPED) && !key) {
             log_printf("h264enc last key frame has dropped, and current frame is non-key frame, so drop it !\n");
         } else {
-            if (sizeof(len) + len <= sizeof(enc->obuff) - enc->osize) {
-                uint32_t typelen = (key ? 'V' : 'v') | (len << 8);
-                enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
-                enc->osize+= sizeof(typelen);
+            if (sizeof(uint32_t) + sizeof(uint32_t) + len <= sizeof(enc->obuff) - enc->osize) {
+                uint32_t timestamp = get_tick_count();
+                uint32_t typelen   = (key ? 'V' : 'v') | (len << 8);
+                enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&timestamp, sizeof(timestamp));
+                enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen  , sizeof(typelen  ));
+                enc->osize+= sizeof(timestamp) + sizeof(typelen);
                 for (i=0; i<num; i++) {
                     enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, nals[i].p_payload, nals[i].i_payload);
                 }
@@ -172,11 +174,12 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout)
+static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     H264ENC *enc = (H264ENC*)ctxt;
-    int32_t typelen = 0, framesize = 0, readsize = 0, ret = 0;
-    struct  timespec ts;
+    uint32_t timestamp = 0;
+    int32_t  typelen = 0, framesize = 0, readsize = 0, ret = 0;
+    struct   timespec ts;
     if (!ctxt) return 0;
 
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -187,14 +190,16 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeou
     pthread_mutex_lock(&enc->omutex);
     while (timeout && enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
-        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&typelen , sizeof(typelen));
-        enc->osize-= sizeof(framesize);
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&timestamp, sizeof(timestamp));
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&typelen  , sizeof(typelen  ));
+        enc->osize-= sizeof(timestamp) + sizeof(framesize);
         framesize  = ((uint32_t)typelen >> 8);
         readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
         enc->osize-= framesize;
     }
+    if (pts  ) *pts   = timestamp;
     if (fsize) *fsize = framesize;
     if (key  ) *key   = ((typelen & 0xFF) == 'V');
     pthread_mutex_unlock(&enc->omutex);

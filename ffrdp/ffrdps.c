@@ -47,13 +47,14 @@ typedef struct {
     uint32_t  tick_qos_check;
 } FFRDPS;
 
-static int ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len)
+static int ffrdp_send_packet(FFRDPS *ffrdps, char type, uint8_t *buf, int len, uint32_t pts)
 {
     int ret;
-    *(int32_t*)buf = (type << 0) | (len << 8);
-    ret = ffrdp_send(ffrdps->ffrdp, buf, len + sizeof(int32_t));
-    if (ret != len + sizeof(int32_t)) {
-        printf("ffrdp_send_packet send packet failed ! %d %d\n", ret, len + sizeof(int32_t));
+    ((uint32_t*)buf)[0] = ('T'  << 0) | (pts << 8);
+    ((uint32_t*)buf)[1] = (type << 0) | (len << 8);
+    ret = ffrdp_send(ffrdps->ffrdp, buf, len + 2 * sizeof(uint32_t));
+    if (ret != len + 2 * sizeof(int32_t)) {
+        printf("ffrdp_send_packet send packet failed ! %d %d\n", ret, len + 2 * sizeof(uint32_t));
         return -1;
     } else return 0;
 }
@@ -109,10 +110,10 @@ static void* ffrdps_thread_proc(void *argv)
                 ppslen = h264enc_getinfo(ffrdps->venc, "pps", ppsbuf, sizeof(ppsbuf));
                 buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
                 buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
-                snprintf(ffrdps->avinfostr+sizeof(uint32_t), sizeof(ffrdps->avinfostr)-sizeof(uint32_t),
+                snprintf(ffrdps->avinfostr + 2 * sizeof(uint32_t), sizeof(ffrdps->avinfostr) - 2 * sizeof(uint32_t),
                     "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s;",
                     ffrdps->aenc->name, ffrdps->channels, ffrdps->samprate, ffrdps->venc->name, ffrdps->width, ffrdps->height, ffrdps->frate, spsstr, ppsstr);
-                ret = ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr+sizeof(uint32_t)) + 1);
+                ret = ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr + 2 * sizeof(uint32_t)) + 1, 0);
                 if (ret == 0) {
                     ffrdps->status |= TS_CLIENT_CONNECTED;
                     printf("client connected !\n");
@@ -121,17 +122,17 @@ static void* ffrdps_thread_proc(void *argv)
         }
 
         if ((ffrdps->status & TS_CLIENT_CONNECTED)) {
-            int readsize, framesize, keyframe;
-            readsize = codec_read(ffrdps->aenc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, &keyframe, 0);
+            int readsize, framesize, keyframe; uint32_t pts;
+            readsize = codec_read(ffrdps->aenc, ffrdps->buff + 2 * sizeof(int32_t), sizeof(ffrdps->buff) - 2 * sizeof(int32_t), &framesize, &keyframe, &pts, 0);
             if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                ret = ffrdp_send_packet(ffrdps, 'A', ffrdps->buff, framesize);
+                ret = ffrdp_send_packet(ffrdps, 'A', ffrdps->buff, framesize, pts);
             }
-            readsize = codec_read(ffrdps->venc, ffrdps->buff + sizeof(int32_t), sizeof(ffrdps->buff) - sizeof(int32_t), &framesize, &keyframe, 0);
+            readsize = codec_read(ffrdps->venc, ffrdps->buff + 2 * sizeof(int32_t), sizeof(ffrdps->buff) - 2 * sizeof(int32_t), &framesize, &keyframe, &pts, 0);
             if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
                 if ((ffrdps->status & TS_KEYFRAME_DROPPED) && !keyframe) {
                     printf("ffrdp key frame has dropped, and current frame is non-key frame, so drop it !\n");
                 } else {
-                    ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize);
+                    ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize, pts);
                     if (ret == 0 && keyframe) ffrdps->status &=~TS_KEYFRAME_DROPPED;
                     if (ret != 0 && keyframe) ffrdps->status |= TS_KEYFRAME_DROPPED;
                 }

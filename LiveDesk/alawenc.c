@@ -46,15 +46,17 @@ static uint8_t pcm2alaw(int16_t pcm)
 
 static void write(void *ctxt, void *buf[8], int len[8])
 {
-    uint32_t typelen, i;
+    uint32_t timestamp, typelen, i;
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
     pthread_mutex_lock(&enc->omutex);
     typelen = len[0] / sizeof(int16_t);
-    if (typelen + sizeof(typelen) <= sizeof(enc->obuff) - enc->osize) {
-        typelen = 'A' | (typelen << 8);
-        enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen, sizeof(typelen));
-        enc->osize+= sizeof(typelen);
+    if (sizeof(uint32_t) + sizeof(uint32_t) + typelen <= sizeof(enc->obuff) - enc->osize) {
+        timestamp = get_tick_count();
+        typelen   = 'A' | (typelen << 8);
+        enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&timestamp, sizeof(timestamp));
+        enc->otail = ringbuf_write(enc->obuff, sizeof(enc->obuff), enc->otail, (uint8_t*)&typelen  , sizeof(typelen  ));
+        enc->osize+= sizeof(timestamp) + sizeof(typelen);
         for (i=0; i<len[0]/sizeof(int16_t); i++,enc->osize++) {
             if (enc->otail == sizeof(enc->obuff)) enc->otail = 0;
             enc->obuff[enc->otail++] = pcm2alaw(((int16_t*)buf[0])[i]);
@@ -66,11 +68,12 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->omutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeout)
+static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
-    int32_t framesize = 0, readsize = 0, ret = 0;
-    struct  timespec ts;
+    uint32_t timestamp = 0;
+    int32_t  framesize = 0, readsize = 0, ret = 0;
+    struct   timespec ts;
     if (!ctxt) return 0;
 
     clock_gettime(CLOCK_REALTIME, &ts);
@@ -81,14 +84,16 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, int timeou
     pthread_mutex_lock(&enc->omutex);
     while (timeout && enc->osize <= 0 && (enc->status & TS_START) && ret != ETIMEDOUT) ret = pthread_cond_timedwait(&enc->ocond, &enc->omutex, &ts);
     if (enc->osize > 0) {
-        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize , sizeof(framesize));
-        enc->osize-= sizeof(framesize);
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&timestamp, sizeof(timestamp));
+        enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead, (uint8_t*)&framesize, sizeof(framesize));
+        enc->osize-= sizeof(timestamp) + sizeof(framesize);
         framesize  = ((uint32_t)framesize >> 8);
         readsize   = MIN(len, framesize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  buf , readsize);
         enc->ohead = ringbuf_read(enc->obuff, sizeof(enc->obuff), enc->ohead,  NULL, framesize - readsize);
         enc->osize-= framesize;
     }
+    if (pts  ) *pts   = timestamp;
     if (fsize) *fsize = framesize;
     if (key  ) *key   = 1;
     pthread_mutex_unlock(&enc->omutex);

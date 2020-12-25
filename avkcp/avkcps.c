@@ -69,10 +69,11 @@ static void avkcps_ikcp_update(AVKCPS *avkcps)
     }
 }
 
-static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len)
+static void ikcp_send_packet(AVKCPS *avkcps, char type, uint8_t *buf, int len, uint32_t pts)
 {
-    int remaining = len + sizeof(int32_t), cursend;
-    *(int32_t*)buf = (type << 0) | (len << 8);
+    int remaining = len + 2 * sizeof(uint32_t), cursend;
+    ((uint32_t*)buf)[0] = ('T'  << 0) | (pts << 8);
+    ((uint32_t*)buf)[1] = (type << 0) | (len << 8);
     do {
         cursend = remaining < 1024 * 1024 ? remaining : 1024 * 1024;
         ikcp_send(avkcps->ikcp, buf, cursend);
@@ -160,14 +161,14 @@ static void* avkcps_thread_proc(void *argv)
 
         if (avkcps->client_connected) {
             if (ikcp_waitsnd(avkcps->ikcp) < 2000) {
-                int readsize, framesize;
-                readsize = codec_read(avkcps->aenc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, NULL, 0);
+                int readsize, framesize; uint32_t pts;
+                readsize = codec_read(avkcps->aenc, avkcps->buff + 2 * sizeof(int32_t), sizeof(avkcps->buff) - 2 * sizeof(int32_t), &framesize, NULL, &pts, 0);
                 if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                    ikcp_send_packet(avkcps, 'A', avkcps->buff, framesize);
+                    ikcp_send_packet(avkcps, 'A', avkcps->buff, framesize, pts);
                 }
-                readsize = codec_read(avkcps->venc, avkcps->buff + sizeof(int32_t), sizeof(avkcps->buff) - sizeof(int32_t), &framesize, NULL, 0);
+                readsize = codec_read(avkcps->venc, avkcps->buff + 2 * sizeof(int32_t), sizeof(avkcps->buff) - 2 * sizeof(int32_t), &framesize, NULL, &pts, 0);
                 if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                    ikcp_send_packet(avkcps, 'V', avkcps->buff, framesize);
+                    ikcp_send_packet(avkcps, 'V', avkcps->buff, framesize, pts);
                 }
             } else {
                 printf("===ck=== client disconnect, max wait send buffer number reached !\n");
@@ -192,10 +193,10 @@ static void* avkcps_thread_proc(void *argv)
                 ppslen = h264enc_getinfo(avkcps->venc, "pps", ppsbuf, sizeof(ppsbuf));
                 buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
                 buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
-                snprintf(avkcps->avinfostr+sizeof(uint32_t), sizeof(avkcps->avinfostr)-sizeof(uint32_t),
+                snprintf(avkcps->avinfostr + 2 * sizeof(uint32_t), sizeof(avkcps->avinfostr) - 2 * sizeof(uint32_t),
                     "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s;",
                     avkcps->aenc->name, avkcps->channels, avkcps->samprate, avkcps->venc->name, avkcps->width, avkcps->height, avkcps->frate, spsstr, ppsstr);
-                ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr+sizeof(uint32_t)) + 1);
+                ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr + 2 * sizeof(uint32_t)) + 1, 0);
                 tickheartbeat = get_tick_count();
                 avkcps->client_connected = 1;
                 printf("===ck=== client connected !\n");

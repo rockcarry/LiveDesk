@@ -45,6 +45,7 @@ static void* record_thread_proc(void *argv)
     char      filepath[256] = "";
     void     *mp4muxer      = NULL;
     int       framesize, readsize;
+    uint32_t  pts;
 
     while (!(recorder->status & TS_EXIT)) {
         if (!(recorder->status & TS_START)) {
@@ -62,14 +63,14 @@ static void* record_thread_proc(void *argv)
             recorder->starttick = get_tick_count();
         }
 
-        readsize = codec_read(recorder->aenc, recorder->buffer, sizeof(recorder->buffer), &framesize, NULL, 16);
+        readsize = codec_read(recorder->aenc, recorder->buffer, sizeof(recorder->buffer), &framesize, NULL, &pts, 16);
         if (readsize > 0) {
-            mp4muxer_audio(mp4muxer, recorder->buffer, readsize, 0);
+            mp4muxer_audio(mp4muxer, recorder->buffer, readsize, pts);
         }
 
-        readsize = codec_read(recorder->venc, recorder->buffer, sizeof(recorder->buffer), &framesize, NULL, 16);
+        readsize = codec_read(recorder->venc, recorder->buffer, sizeof(recorder->buffer), &framesize, NULL, &pts, 16);
         if (readsize > 0) {
-            mp4muxer_video(mp4muxer, recorder->buffer, readsize, 0);
+            mp4muxer_video(mp4muxer, recorder->buffer, readsize, pts);
         }
 
         if ((int32_t)get_tick_count() - (int32_t)recorder->starttick > recorder->duration) {
