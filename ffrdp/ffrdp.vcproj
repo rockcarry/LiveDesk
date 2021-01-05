@@ -156,6 +156,10 @@
 				RelativePath=".\ffrdps.c"
 				>
 			</File>
+			<File
+				RelativePath=".\mouse.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -168,6 +172,10 @@
 			</File>
 			<File
 				RelativePath=".\ffrdps.h"
+				>
+			</File>
+			<File
+				RelativePath=".\mouse.h"
 				>
 			</File>
 		</Filter>
