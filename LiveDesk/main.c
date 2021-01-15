@@ -56,6 +56,8 @@ int main(int argc, char *argv[])
     for (i=1; i<argc; i++) {
         if (strcmp(argv[i], "--aac") == 0) {
             aenctype = 1;
+        } else if (strcmp(argv[i], "--h265") == 0) {
+            venctype = 1;
         } else if (strstr(argv[i], "--channels=") == argv[i]) {
             channels = atoi(argv[i] + 11);
         } else if (strstr(argv[i], "--samplerate=") == argv[i]) {
@@ -122,7 +124,7 @@ int main(int argc, char *argv[])
     live->adev = adev_init(channels, samplerate);
     live->vdev = vdev_init(framerate, vwidth, vheight);
     live->aenc = aenctype ? aacenc_init(channels, samplerate, abitrate) : alawenc_init();
-    live->venc = h264enc_init(framerate, vwidth, vheight, vbitrate);
+    live->venc = venctype ? h265enc_init(framerate, vwidth, vheight, vbitrate) : h264enc_init(framerate, vwidth, vheight, vbitrate);
     adev_set_callback(live->adev, live->aenc->write, live->aenc);
     vdev_set_callback(live->vdev, live->venc->write, live->venc);
 
