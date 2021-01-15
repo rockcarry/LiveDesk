@@ -228,7 +228,7 @@ CODEC* aacenc_init(int channels, int samplerate, int bitrate)
     conf->quantqual     = 88;
     faacEncSetConfiguration(enc->faacenc, conf);
     faacEncGetDecoderSpecificInfo(enc->faacenc, &enc->aaccfgptr, &enc->aaccfgsize);
-    memcpy(enc->info, enc->aaccfgptr, MIN(sizeof(enc->info), enc->aaccfgsize));
+    memcpy(enc->aacinfo, enc->aaccfgptr, MIN(sizeof(enc->aacinfo), enc->aaccfgsize));
 
     pthread_create(&enc->thread, NULL, aenc_encode_thread_proc, enc);
     return (CODEC*)enc;

@@ -26,7 +26,7 @@ static int h264_parse_nalu_header(uint8_t *data, int len)
     return -1;
 }
 
-int h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf, int *sps_len, uint8_t **pps_buf, int *pps_len)
+static int h264_parse_key_sps_pps(uint8_t *data, int len, int *key, uint8_t **sps_buf, int *sps_len, uint8_t **pps_buf, int *pps_len)
 {
     uint8_t *sbuf, *pbuf;
     int slen = 0, plen = 0, type, i;

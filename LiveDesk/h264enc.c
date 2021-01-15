@@ -50,10 +50,10 @@ typedef struct {
 
 static void* venc_encode_thread_proc(void *param)
 {
-    H264ENC *enc = (H264ENC*)param;
-    uint8_t *yuv = NULL;
+    H264ENC    *enc = (H264ENC*)param;
+    uint8_t    *yuv = NULL;
+    x264_nal_t *nals= NULL;
     x264_picture_t pic_in, pic_out;
-    x264_nal_t *nals;
     int32_t key, len, num, i;
 
     x264_picture_init(&pic_in );
@@ -262,10 +262,23 @@ static void obufunlock(void *ctxt, int head, int tail, int size)
     pthread_mutex_unlock(&enc->omutex);
 }
 
+static void reconfig(CODEC *codec, int bitrate)
+{
+    H264ENC *enc = (H264ENC*)codec;
+    int      ret;
+    enc->param.rc.i_bitrate         = bitrate / 1000;
+    enc->param.rc.i_rc_method       = X264_RC_ABR;
+    enc->param.rc.f_rate_tolerance  = 2;
+    enc->param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
+    enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
+    ret = x264_encoder_reconfig(enc->x264, &enc->param);
+    printf("x264_encoder_reconfig bitrate: %d, ret: %d\n", bitrate, ret);
+}
+
 CODEC* h264enc_init(int frate, int w, int h, int bitrate)
 {
-    int      i;
-    H264ENC *enc = calloc(1, sizeof(H264ENC) + (w * h * 3 / 2) * YUV_BUF_NUM);
+    x264_nal_t *nals; int n, i;
+    H264ENC    *enc = calloc(1, sizeof(H264ENC) + (w * h * 3 / 2) * YUV_BUF_NUM);
     if (!enc) return NULL;
 
     strncpy(enc->name, "h264enc", sizeof(enc->name));
@@ -276,6 +289,7 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     enc->reset      = reset;
     enc->obuflock   = obuflock;
     enc->obufunlock = obufunlock;
+    enc->reconfig   = reconfig;
 
     // init mutex & cond
     pthread_mutex_init(&enc->imutex, NULL);
@@ -285,6 +299,9 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
 
     x264_param_default_preset(&enc->param, "ultrafast", "zerolatency");
     x264_param_apply_profile (&enc->param, "baseline");
+    enc->param.b_repeat_headers = 1;
+    enc->param.i_timebase_num   = 1;
+    enc->param.i_timebase_den   = 1000;
     enc->param.i_csp            = X264_CSP_I420;
     enc->param.i_width          = w;
     enc->param.i_height         = h;
@@ -312,47 +329,28 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     enc->param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
     enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
 #endif
-    enc->param.i_timebase_num   = 1;
-    enc->param.i_timebase_den   = 1000;
-    enc->param.b_repeat_headers = 1;
+
     enc->ow   = w;
     enc->oh   = h;
     enc->x264 = x264_encoder_open(&enc->param);
     for (i=0; i<YUV_BUF_NUM; i++) {
         enc->ibuff[i] = (uint8_t*)enc + sizeof(H264ENC) + i * (w * h * 3 / 2);
     }
-    pthread_create(&enc->thread, NULL, venc_encode_thread_proc, enc);
-    return (CODEC*)enc;
-}
 
-int h264enc_getinfo(void *ctxt, char *name, uint8_t *buf, int len)
-{
-    x264_nal_t *nals;
-    int         t, n, i;
-    H264ENC *enc = (H264ENC*)ctxt;
-    if (!ctxt) return -1;
-    if      (strcmp(name, "sps") == 0) t = NAL_SPS;
-    else if (strcmp(name, "pps") == 0) t = NAL_PPS;
-    else return -1;
     x264_encoder_headers(enc->x264, &nals, &n);
     for (i=0; i<n; i++) {
-        if (nals[i].i_type == t && nals[i].i_payload < len) {
-            memcpy(buf, nals[i].p_payload, nals[i].i_payload);
-            return nals[i].i_payload;
+        switch (nals[i].i_type) {
+        case NAL_SPS:
+            enc->spsinfo[0] = MIN(nals[i].i_payload, 255);
+            memcpy(enc->spsinfo + 1, nals[i].p_payload, enc->spsinfo[0]);
+            break;
+        case NAL_PPS:
+            enc->ppsinfo[0] = MIN(nals[i].i_payload, 255);
+            memcpy(enc->ppsinfo + 1, nals[i].p_payload, enc->ppsinfo[0]);
+            break;
         }
     }
-    return -1;
-}
 
-void h264enc_reconfig(CODEC *codec, int bitrate)
-{
-    H264ENC *enc = (H264ENC*)codec;
-    int      ret;
-    enc->param.rc.i_bitrate         = bitrate / 1000;
-    enc->param.rc.i_rc_method       = X264_RC_ABR;
-    enc->param.rc.f_rate_tolerance  = 2;
-    enc->param.rc.i_vbv_max_bitrate = 2 * bitrate / 1000;
-    enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
-    ret = x264_encoder_reconfig(enc->x264, &enc->param);
-    printf("x264_encoder_reconfig bitrate: %d\n", bitrate);
+    pthread_create(&enc->thread, NULL, venc_encode_thread_proc, enc);
+    return (CODEC*)enc;
 }

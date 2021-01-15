@@ -179,9 +179,7 @@ static void* avkcps_thread_proc(void *argv)
         while (1) {
             if ((ret = recvfrom(avkcps->server_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&fromaddr, &addrlen)) <= 0) break;
             if (avkcps->client_connected == 0) {
-                uint8_t spsbuf[256], ppsbuf[256];
-                char    spsstr[256] = "", ppsstr[256] = "";
-                int     spslen, ppslen;
+                char spsstr[256] = "", ppsstr[256] = "", vpsstr[256] = "";
                 memcpy(&avkcps->client_addr, &fromaddr, sizeof(avkcps->client_addr));
                 codec_reset(avkcps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_reset(avkcps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
@@ -189,13 +187,12 @@ static void* avkcps_thread_proc(void *argv)
                 codec_start(avkcps->venc, 1);
                 adev_start (avkcps->adev, 1);
                 vdev_start (avkcps->vdev, 1);
-                spslen = h264enc_getinfo(avkcps->venc, "sps", spsbuf, sizeof(spsbuf));
-                ppslen = h264enc_getinfo(avkcps->venc, "pps", ppsbuf, sizeof(ppsbuf));
-                buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
-                buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
+                buf2hexstr(spsstr, sizeof(spsstr), avkcps->venc->spsinfo + 1, avkcps->venc->spsinfo[0]);
+                buf2hexstr(ppsstr, sizeof(ppsstr), avkcps->venc->ppsinfo + 1, avkcps->venc->ppsinfo[0]);
+                buf2hexstr(vpsstr, sizeof(vpsstr), avkcps->venc->vpsinfo + 1, avkcps->venc->vpsinfo[0]);
                 snprintf(avkcps->avinfostr + 2 * sizeof(uint32_t), sizeof(avkcps->avinfostr) - 2 * sizeof(uint32_t),
-                    "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s;",
-                    avkcps->aenc->name, avkcps->channels, avkcps->samprate, avkcps->venc->name, avkcps->width, avkcps->height, avkcps->frate, spsstr, ppsstr);
+                    "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s,vps=%s;",
+                    avkcps->aenc->name, avkcps->channels, avkcps->samprate, avkcps->venc->name, avkcps->width, avkcps->height, avkcps->frate, spsstr, ppsstr, vpsstr);
                 ikcp_send_packet(avkcps, 'I', avkcps->avinfostr, (int)strlen(avkcps->avinfostr + 2 * sizeof(uint32_t)) + 1, 0);
                 tickheartbeat = get_tick_count();
                 avkcps->client_connected = 1;

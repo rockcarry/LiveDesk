@@ -38,7 +38,7 @@ AACAudioLiveServerMediaSubsession::~AACAudioLiveServerMediaSubsession() {
 
 FramedSource* AACAudioLiveServerMediaSubsession
 ::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  AACLiveFramedSource *source = AACLiveFramedSource::createNew(envir(), mServer, mServer->aenc->info);
+  AACLiveFramedSource *source = AACLiveFramedSource::createNew(envir(), mServer, mServer->aenc->aacinfo);
   return source;
 }
 

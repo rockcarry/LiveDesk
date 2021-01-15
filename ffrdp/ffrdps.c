@@ -102,22 +102,19 @@ static void* ffrdps_thread_proc(void *argv)
         ret = ffrdp_recv(ffrdps->ffrdp, (char*)buffer, sizeof(buffer));
         if (ret > 0) {
             if ((ffrdps->status & TS_CLIENT_CONNECTED) == 0) {
-                uint8_t spsbuf[256], ppsbuf[256];
-                char    spsstr[256] = "", ppsstr[256] = "";
-                int     spslen, ppslen;
+                char spsstr[256] = "", ppsstr[256] = "", vpsstr[256] = "";
                 codec_reset(ffrdps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_reset(ffrdps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
                 codec_start(ffrdps->aenc, 1);
                 codec_start(ffrdps->venc, 1);
                 adev_start (ffrdps->adev, 1);
                 vdev_start (ffrdps->vdev, 1);
-                spslen = h264enc_getinfo(ffrdps->venc, "sps", spsbuf, sizeof(spsbuf));
-                ppslen = h264enc_getinfo(ffrdps->venc, "pps", ppsbuf, sizeof(ppsbuf));
-                buf2hexstr(spsstr, sizeof(spsstr), spsbuf, spslen);
-                buf2hexstr(ppsstr, sizeof(ppsstr), ppsbuf, ppslen);
+                buf2hexstr(spsstr, sizeof(spsstr), ffrdps->venc->spsinfo + 1, ffrdps->venc->spsinfo[0]);
+                buf2hexstr(ppsstr, sizeof(ppsstr), ffrdps->venc->ppsinfo + 1, ffrdps->venc->ppsinfo[0]);
+                buf2hexstr(vpsstr, sizeof(vpsstr), ffrdps->venc->vpsinfo + 1, ffrdps->venc->vpsinfo[0]);
                 snprintf(ffrdps->avinfostr + 2 * sizeof(uint32_t), sizeof(ffrdps->avinfostr) - 2 * sizeof(uint32_t),
-                    "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s;",
-                    ffrdps->aenc->name, ffrdps->channels, ffrdps->samprate, ffrdps->venc->name, ffrdps->width, ffrdps->height, ffrdps->frate, spsstr, ppsstr);
+                    "aenc=%s,channels=%d,samprate=%d;venc=%s,width=%d,height=%d,frate=%d,sps=%s,pps=%s,vps=%s;",
+                    ffrdps->aenc->name, ffrdps->channels, ffrdps->samprate, ffrdps->venc->name, ffrdps->width, ffrdps->height, ffrdps->frate, spsstr, ppsstr, vpsstr);
                 ret = ffrdp_send_packet(ffrdps, 'I', ffrdps->avinfostr, (int)strlen(ffrdps->avinfostr + 2 * sizeof(uint32_t)) + 1, 0);
                 if (ret == 0) {
                     ffrdps->status |= TS_CLIENT_CONNECTED;
@@ -257,7 +254,7 @@ void ffrdps_reconfig_bitrate(void *ctxt, int bitrate)
 {
     FFRDPS *ffrdps = ctxt;
     if (!ctxt) return;
-    h264enc_reconfig(ffrdps->venc, bitrate);
+    codec_reconfig(ffrdps->venc, bitrate);
 }
 
 void ffrdps_adaptive_bitrate_setup(void *ctxt, int *blist, int n)
@@ -273,7 +270,7 @@ void ffrdps_adaptive_bitrate_enable(void *ctxt, int en)
     FFRDPS *ffrdps = ctxt;
     if (!ctxt) return;
     ffrdps->bitrate_cur_idx= ffrdps->bitrate_list_size / 2;
-    h264enc_reconfig(ffrdps->venc, ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
+    codec_reconfig(ffrdps->venc, ffrdps->bitrate_list_buf[ffrdps->bitrate_cur_idx]);
     if (en && ffrdps->bitrate_list_size > 0) {
         ffrdps->tick_qos_check = get_tick_count();
         ffrdps->status |= TS_ADAPTIVE_BITRATE;

@@ -91,7 +91,7 @@ void* rtmppusher_init(char *url, void *adev, void *vdev, CODEC *aenc, CODEC *ven
     }
 #endif
 
-    pusher->rtmp = rtmp_push_init(url, aenc->info);
+    pusher->rtmp = rtmp_push_init(url, aenc->aacinfo);
     pusher->adev = adev;
     pusher->vdev = vdev;
     pusher->aenc = aenc;
