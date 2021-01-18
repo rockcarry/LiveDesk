@@ -89,7 +89,7 @@ static void* venc_encode_thread_proc(void *param)
         if (len <= 0) continue;
 
         pthread_mutex_lock(&enc->omutex);
-        key = (nals[0].type == NAL_UNIT_SPS);
+        key = (nals[0].type == NAL_UNIT_VPS);
         if ((enc->status & TS_KEYFRAME_DROPPED) && !key) {
             log_printf("h265enc last key frame has dropped, and current frame is non-key frame, so drop it !\n");
         } else {
