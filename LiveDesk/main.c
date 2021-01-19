@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     int       vwidth   = GetSystemMetrics(SM_CXSCREEN);
     int       vheight  = GetSystemMetrics(SM_CYSCREEN);
     int       venctype = 0, framerate= 20, vbitrate = 512000;
-    int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:mp4, 3:avkcp, 4:ffrdp
+    int       rectype  = 0; // 0:rtsp, 1:rtmp, 2:avi, 3:mp4, 4:avkcp, 5:ffrdp
     int       duration = 60000;
     int       avkcpport= 8000;
     int       ffrdpport= 8000;
@@ -80,12 +80,14 @@ int main(int argc, char *argv[])
             rectype = 0; strncpy(recpath, argv[i] + 7, sizeof(recpath));
         } else if (strstr(argv[i], "--rtmp=") == argv[i]) {
             rectype = 1; strncpy(recpath, argv[i] + 7, sizeof(recpath));
-        } else if (strstr(argv[i], "--mp4=") == argv[i]) {
+        } else if (strstr(argv[i], "--avi=") == argv[i]) {
             rectype = 2; strncpy(recpath, argv[i] + 6, sizeof(recpath));
+        } else if (strstr(argv[i], "--mp4=") == argv[i]) {
+            rectype = 3; strncpy(recpath, argv[i] + 6, sizeof(recpath));
         } else if (strstr(argv[i], "--avkcps=") == argv[i]) {
-            rectype = 3; avkcpport = atoi(argv[i] + 9);
+            rectype = 4; avkcpport = atoi(argv[i] + 9);
         } else if (strstr(argv[i], "--ffrdps=") == argv[i]) {
-            rectype = 4; ffrdpport = atoi(argv[i] + 9);
+            rectype = 5; ffrdpport = atoi(argv[i] + 9);
         } else if (strstr(argv[i], "--ffrdpstxkey=") == argv[i]) {
             strncpy(ffrdptxkey, argv[i] + 14, sizeof(ffrdptxkey));
         } else if (strstr(argv[i], "--ffrdpsrxkey=") == argv[i]) {
@@ -95,6 +97,9 @@ int main(int argc, char *argv[])
         }
     }
     if (rectype == 2) {
+        aenctype = 0;
+    }
+    if (rectype == 3) {
         aenctype = 1;
     }
     if (aenctype == 0) {
@@ -102,7 +107,7 @@ int main(int argc, char *argv[])
         samplerate = 8000;
         abitrate   = 64000;
     }
-    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : rectype == 2 ? "mp4" : rectype == 3 ? "avkcps" : rectype == 4 ? "ffrdps" : "unknow");
+    printf("rectype   : %s\n", rectype == 0 ? "rtsp" : rectype == 1 ? "rtmp" : rectype == 2 ? "avi" : rectype == 3 ? "mp4" : rectype == 4 ? "avkcps" : rectype == 5 ? "ffrdps" : "unknow");
     printf("recpath   : %s\n", recpath);
     printf("duration  : %d\n", duration);
     printf("avkcpport : %d\n", avkcpport);
@@ -131,9 +136,10 @@ int main(int argc, char *argv[])
     switch (rectype) {
     case 0: live->rtsp  = rtspserver_init(recpath, live->adev, live->vdev, live->aenc, live->venc, framerate); break;
     case 1: live->rtmp  = rtmppusher_init(recpath, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 2: live->rec   = ffrecorder_init(recpath, duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 3: live->avkcps= avkcps_init(avkcpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
-    case 4: live->ffrdps= ffrdps_init(ffrdpport, ffrdptxkey, ffrdprxkey, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 2: live->rec   = ffrecorder_init(recpath, "avi", duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 3: live->rec   = ffrecorder_init(recpath, "mp4", duration, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 4: live->avkcps= avkcps_init(avkcpport, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
+    case 5: live->ffrdps= ffrdps_init(ffrdpport, ffrdptxkey, ffrdprxkey, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
     if (rectype == 4 && ffrdpauto) { // setup adaptive bitrate list
@@ -148,12 +154,12 @@ int main(int argc, char *argv[])
         scanf("%256s", cmd);
         if (stricmp(cmd, "quit") == 0 || stricmp(cmd, "exit") == 0) {
             live->status |= TS_EXIT;
-        } else if (rectype == 2 && stricmp(cmd, "mp4_start") == 0) {
+        } else if (rectype == 2 && stricmp(cmd, "record_start") == 0) {
             ffrecorder_start(live->rec, 1);
-            printf("mp4 file recording started !\n");
-        } else if (rectype == 2 && stricmp(cmd, "mp4_pause") == 0) {
+            printf("file recording started !\n");
+        } else if (rectype == 2 && stricmp(cmd, "record_pause") == 0) {
             ffrecorder_start(live->rec, 0);
-            printf("mp4 file recording paused !\n");
+            printf("file recording paused !\n");
         } else if (rectype == 1 && stricmp(cmd, "rtmp_start") == 0) {
             rtmppusher_start(live->rtmp, 1);
             printf("rtmp push started !\n");
@@ -176,11 +182,11 @@ int main(int argc, char *argv[])
             printf("available commmand:\n");
             printf("- help: show this mesage.\n");
             printf("- quit: quit this program.\n");
-            printf("- mp4_start  : start recording screen to mp4 files.\n");
-            printf("- mp4_pause  : pause recording screen to mp4 files.\n");
-            printf("- rtmp_start : start rtmp push.\n");
-            printf("- rtmp_pause : pause rtmp push.\n");
-            printf("- ffrdps_dump: dump ffrdps server.\n\n");
+            printf("- record_start: start recording screen to files.\n");
+            printf("- record_pause: pause recording screen to files.\n");
+            printf("- rtmp_start  : start rtmp push.\n");
+            printf("- rtmp_pause  : pause rtmp push.\n");
+            printf("- ffrdps_dump : dump ffrdps server.\n\n");
         }
     }
 

@@ -423,7 +423,6 @@ typedef struct {
     uint8_t   reserved[3];
     FILE     *fp;
     int       frate;
-    int       gop;
     int       samprate;
     int       sampnum;
 
@@ -544,7 +543,6 @@ void* mp4muxer_init(char *file, int duration, int w, int h, int frate, int gop, 
     if (!mp4) return NULL;
     mp4->fp      = fopen(file, "wb");
     mp4->frate   = frate;
-    mp4->gop     = gop;
     mp4->samprate= samprate;
     mp4->sampnum = sampnum;
     if (!mp4->fp) {
@@ -650,7 +648,7 @@ void* mp4muxer_init(char *file, int duration, int w, int h, int frate, int gop, 
     mp4->avcc_pps_len        = (uint16_t)(htonl(sizeof(mp4->avcc_pps_data)) >> 16);
 
     mp4->vframemax           = (int)((int64_t)duration * frate / 1000 + frate / 2);
-    mp4->syncf_max           = mp4->vframemax / mp4->gop;
+    mp4->syncf_max           = mp4->vframemax / gop;
 
 #if VIDEO_TIMESCALE_BY_FRAME_RATE
     mp4->sttsv_size          = 16 + 1 * sizeof(uint32_t) * 2;
@@ -871,10 +869,10 @@ void mp4muxer_exit(void *ctx)
     }
 }
 
-void mp4muxer_video(void *ctx, unsigned char *buf, int len, unsigned pts)
+void mp4muxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pts)
 {
     MP4FILE *mp4 = (MP4FILE*)ctx;
-    int      key = 0, fsize;
+    int      fsize;
     uint8_t *spsbuf, *ppsbuf;
     int      spslen,  ppslen;
     if (!ctx) return;
@@ -932,7 +930,7 @@ void mp4muxer_video(void *ctx, unsigned char *buf, int len, unsigned pts)
 #endif
 }
 
-void mp4muxer_audio(void *ctx, unsigned char *buf, int len, unsigned pts)
+void mp4muxer_audio(void *ctx, unsigned char *buf, int len, int key, unsigned pts)
 {
     MP4FILE *mp4 = (MP4FILE*)ctx;
     if (!ctx) return;
