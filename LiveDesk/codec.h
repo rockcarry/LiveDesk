@@ -18,9 +18,9 @@ typedef void (*PFN_CODEC_CALLBACK)(void *ctxt, void *buf[8], int len[8]);
 #define CODEC_INTERFACE_FUNCS \
     char    name[8]; \
     uint8_t aacinfo[8]; \
+    uint8_t vpsinfo[256]; \
     uint8_t spsinfo[256]; \
     uint8_t ppsinfo[256]; \
-    uint8_t vpsinfo[256]; \
     void (*uninit )(void *ctxt); \
     void (*write  )(void *ctxt, void *buf[8], int len[8]); \
     int  (*read   )(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout); \

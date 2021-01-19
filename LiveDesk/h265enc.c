@@ -333,6 +333,10 @@ CODEC* h265enc_init(int frate, int w, int h, int bitrate)
     x265_encoder_headers(enc->x265, &nals, &n);
     for (i=0; i<n; i++) {
         switch (nals[i].type) {
+        case NAL_UNIT_VPS:
+            enc->vpsinfo[0] = MIN(nals[i].sizeBytes, 255);
+            memcpy(enc->vpsinfo + 1, nals[i].payload, enc->vpsinfo[0]);
+            break;
         case NAL_UNIT_SPS:
             enc->spsinfo[0] = MIN(nals[i].sizeBytes, 255);
             memcpy(enc->spsinfo + 1, nals[i].payload, enc->spsinfo[0]);
@@ -340,10 +344,6 @@ CODEC* h265enc_init(int frate, int w, int h, int bitrate)
         case NAL_UNIT_PPS:
             enc->ppsinfo[0] = MIN(nals[i].sizeBytes, 255);
             memcpy(enc->ppsinfo + 1, nals[i].payload, enc->ppsinfo[0]);
-            break;
-        case NAL_UNIT_VPS:
-            enc->vpsinfo[0] = MIN(nals[i].sizeBytes, 255);
-            memcpy(enc->vpsinfo + 1, nals[i].payload, enc->vpsinfo[0]);
             break;
         }
     }
