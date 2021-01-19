@@ -5,7 +5,7 @@
 #include "log.h"
 
 #define WAVE_SAMPLE_SIZE  16
-#define WAVE_FRAME_RATE   50
+#define WAVE_FRAME_RATE   25
 #define WAVE_BUFFER_NUM   5
 typedef struct {
     HWAVEIN  hwavein;
