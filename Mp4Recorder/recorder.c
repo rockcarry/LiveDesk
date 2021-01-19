@@ -80,7 +80,7 @@ static void* record_thread_proc(void *argv)
                     break;
                 case RECTYPE_MP4:
                     snprintf(filepath, sizeof(filepath), "%s-%03d.mp4", recorder->filename, ++recorder->recfilecnt);
-                    muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->aacinfo);
+                    muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->aacinfo, ish265);
                     break;
                 }
                 recorder->starttick = get_tick_count();
