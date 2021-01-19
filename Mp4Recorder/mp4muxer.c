@@ -1014,9 +1014,10 @@ void mp4muxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pt
 
     fsize = len - vpslen - spslen - ppslen;
     if (fsize == 0) return;
-    buf += vpslen + spslen + ppslen;
-    len  = fsize;
-    fsize= htonl(fsize);
+    if (vpslen + spslen + ppslen) key = 1;
+    buf  += vpslen + spslen + ppslen;
+    len   = fsize;
+    fsize = htonl(fsize);
 
     if (mp4->stszv_buf && (int)ntohl(mp4->stszv_count) < mp4->vframemax) {
         mp4->stszv_buf[ntohl(mp4->stszv_count)] = htonl(len + sizeof(uint32_t));
