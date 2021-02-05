@@ -154,10 +154,10 @@ int main(int argc, char *argv[])
         scanf("%256s", cmd);
         if (stricmp(cmd, "quit") == 0 || stricmp(cmd, "exit") == 0) {
             live->status |= TS_EXIT;
-        } else if (rectype == 2 && stricmp(cmd, "record_start") == 0) {
+        } else if ((rectype == 2 || rectype == 3) && stricmp(cmd, "record_start") == 0) {
             ffrecorder_start(live->rec, 1);
             printf("file recording started !\n");
-        } else if (rectype == 2 && stricmp(cmd, "record_pause") == 0) {
+        } else if ((rectype == 2 || rectype == 3) && stricmp(cmd, "record_pause") == 0) {
             ffrecorder_start(live->rec, 0);
             printf("file recording paused !\n");
         } else if (rectype == 1 && stricmp(cmd, "rtmp_start") == 0) {
@@ -166,15 +166,13 @@ int main(int argc, char *argv[])
         } else if (rectype == 1 && stricmp(cmd, "rtmp_pause") == 0) {
             rtmppusher_start(live->rtmp, 0);
             printf("rtmp push paused !\n");
-        } else if (rectype == 3 && stricmp(cmd, "avkcpc_start") == 0) {
-            if (live->avkcpc == NULL) live->avkcpc = avkcpc_init("127.0.0.1", avkcpport, NULL, NULL);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_dump") == 0) {
+        } else if (rectype == 5 && stricmp(cmd, "ffrdps_dump") == 0) {
             int val; scanf("%d", &val);
             if (live->ffrdps) ffrdps_dump(live->ffrdps, val);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_adaptive_bitrate_en") == 0) {
+        } else if (rectype == 5 && stricmp(cmd, "ffrdps_adaptive_bitrate_en") == 0) {
             int val; scanf("%d", &val);
             if (live->ffrdps) ffrdps_adaptive_bitrate_enable(live->ffrdps, val);
-        } else if (rectype == 4 && stricmp(cmd, "ffrdps_reconfig_bitrate") == 0) {
+        } else if (rectype == 5 && stricmp(cmd, "ffrdps_reconfig_bitrate") == 0) {
             int val; scanf("%d", &val);
             if (live->ffrdps) ffrdps_reconfig_bitrate(live->ffrdps, val);
         } else if (stricmp(cmd, "help") == 0) {
