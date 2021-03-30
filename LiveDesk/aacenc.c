@@ -7,6 +7,10 @@
 #include "faac.h"
 #include "log.h"
 
+#ifdef WIN32
+#define timespec timespec32
+#endif
+
 #define IN_BUF_SIZE  (1024 * 2 * 4)
 #define OUT_BUF_SIZE (1024 * 2 * 1)
 typedef struct {

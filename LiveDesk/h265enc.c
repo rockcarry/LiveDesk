@@ -11,6 +11,10 @@
 #include "libavutil/frame.h"
 #include "libswscale/swscale.h"
 
+#ifdef WIN32
+#define timespec timespec32
+#endif
+
 #define YUV_BUF_NUM    3
 #define OUT_BUF_SIZE  (2 * 1024 * 1024)
 typedef struct {

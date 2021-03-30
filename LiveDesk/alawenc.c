@@ -6,6 +6,10 @@
 #include "codec.h"
 #include "log.h"
 
+#ifdef WIN32
+#define timespec timespec32
+#endif
+
 #define OUT_BUF_SIZE (1024 * 1 * 1)
 typedef struct {
     CODEC_INTERFACE_FUNCS
