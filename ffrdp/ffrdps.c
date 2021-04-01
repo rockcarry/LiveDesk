@@ -9,6 +9,7 @@
 #include "ffrdp.h"
 #include "ffrdps.h"
 #include "mouse.h"
+#include "keybd.h"
 
 #pragma warning(disable:4996) // disable warnings
 #define usleep(t) Sleep((t) / 1000)
@@ -19,6 +20,9 @@
 
 #define FFRDPC_MOUSE_EVENT_MSG  (('M' << 0) | ('E' << 8) | ('V' << 16) | ('T' << 24))
 #define FFRDPC_MOUSE_EVENT_LEN   8
+
+#define FFRDPC_KEYBD_EVENT_MSG  (('K' << 0) | ('E' << 8) | ('V' << 16) | ('T' << 24))
+#define FFRDPC_KEYBD_EVENT_LEN   8
 
 typedef struct {
     #define TS_EXIT             (1 << 0)
@@ -32,6 +36,7 @@ typedef struct {
     int channels, samprate, width, height, frate;
 
     void     *mouse;
+    void     *keybd;
     void     *ffrdp;
     void     *adev;
     void     *vdev;
@@ -131,6 +136,13 @@ static void* ffrdps_thread_proc(void *argv)
                         event += FFRDPC_MOUSE_EVENT_LEN;
                         ret   -= FFRDPC_MOUSE_EVENT_LEN;
                         break;
+                    case FFRDPC_KEYBD_EVENT_MSG:
+                        if (ret >= FFRDPC_KEYBD_EVENT_LEN) {
+                            ffkeybd_event(ffrdps->keybd, event[4], event[5], event[6], event[7]);
+                        }
+                        event += FFRDPC_KEYBD_EVENT_LEN;
+                        ret   -= FFRDPC_KEYBD_EVENT_LEN;
+                        break;
                     default:
                         ret -= sizeof(uint32_t);
                         break;
@@ -199,6 +211,7 @@ void* ffrdps_init(int port, char *txkey, char *rxkey, int channels, int samprate
     }
 
     ffrdps->mouse    = ffmouse_init("win32_mouse_dev");
+    ffrdps->keybd    = ffkeybd_init("win32_keybd_dev");
     ffrdps->adev     = adev;
     ffrdps->vdev     = vdev;
     ffrdps->aenc     = aenc;
@@ -229,6 +242,7 @@ void ffrdps_exit(void *ctxt)
     ffrdps->status |= TS_EXIT;
     pthread_join(ffrdps->pthread, NULL);
     ffmouse_exit(ffrdps->mouse);
+    ffkeybd_exit(ffrdps->keybd);
     free(ctxt);
 }
 

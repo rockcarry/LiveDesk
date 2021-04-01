@@ -157,6 +157,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\keybd.c"
+				>
+			</File>
+			<File
 				RelativePath=".\mouse.c"
 				>
 			</File>
@@ -172,6 +176,10 @@
 			</File>
 			<File
 				RelativePath=".\ffrdps.h"
+				>
+			</File>
+			<File
+				RelativePath=".\keybd.h"
 				>
 			</File>
 			<File
