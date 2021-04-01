@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     case 5: live->ffrdps= ffrdps_init(ffrdpport, ffrdptxkey, ffrdprxkey, channels, samplerate, vwidth, vheight, framerate, live->adev, live->vdev, live->aenc, live->venc); break;
     }
 
-    if (rectype == 4 && ffrdpauto) { // setup adaptive bitrate list
+    if (rectype == 5 && ffrdpauto) { // setup adaptive bitrate list
         int blist[16] = { 250000, 500000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000, 2100000, 2200000, 2300000, 2400000, 2500000, 2600000, 2700000 };
         ffrdps_adaptive_bitrate_setup (live->ffrdps, blist, 15);
         ffrdps_adaptive_bitrate_enable(live->ffrdps, 1);
