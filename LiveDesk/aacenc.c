@@ -11,8 +11,8 @@
 #define timespec timespec32
 #endif
 
-#define IN_BUF_SIZE  (1024 * 2 * 4)
-#define OUT_BUF_SIZE (1024 * 2 * 1)
+#define IN_BUF_SIZE  (1024 * 4 * 4)
+#define OUT_BUF_SIZE (1024 * 8 * 1)
 typedef struct {
     CODEC_INTERFACE_FUNCS
 
@@ -46,7 +46,7 @@ typedef struct {
 static void* aenc_encode_thread_proc(void *param)
 {
     AACENC *enc = (AACENC*)param;
-    uint8_t outbuf[2048];
+    uint8_t outbuf[8192];
     int32_t len = 0;
 
     while (!(enc->status & TS_EXIT)) {
