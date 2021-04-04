@@ -69,8 +69,8 @@ void* vdev_init(int frate, int w, int h)
     VDEV *vdev = calloc(1, sizeof(VDEV));
     if (!vdev) return NULL;
 
-    vdev->hdcsrc = GetDC(GetDesktopWindow());
-    vdev->hdcdst = CreateCompatibleDC(vdev->hdcsrc);
+    vdev->hdcsrc = GetDC(NULL);
+    vdev->hdcdst = CreateCompatibleDC(NULL);
 
     vdev->screen_width  = GetSystemMetrics(SM_CXSCREEN);
     vdev->screen_height = GetSystemMetrics(SM_CYSCREEN);
@@ -99,7 +99,7 @@ void vdev_free(void *ctxt)
     vdev->status |= TS_EXIT;
     pthread_join(vdev->thread, NULL);
 
-    ReleaseDC(GetDesktopWindow(), vdev->hdcsrc);
+    ReleaseDC(NULL, vdev->hdcsrc);
     DeleteDC(vdev->hdcdst);
     DeleteObject(vdev->hbitmap);
     free(vdev);
