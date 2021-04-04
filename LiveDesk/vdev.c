@@ -10,6 +10,7 @@
 #include "libswscale/swscale.h"
 
 typedef struct {
+    HDC      hdcsrc;
     HDC      hdcdst;
     HBITMAP  hbitmap;
     uint8_t *bmp_buffer;
@@ -35,8 +36,6 @@ static void* vdev_capture_thread_proc(void *param)
     CURSORINFO curinfo = {0};
     ICONINFO   icoinfo = {0};
     HCURSOR    hcursor = NULL;
-    HWND       hwnddesk= NULL;
-    HDC        hdcsrc  = NULL;
 
     while (!(vdev->status & TS_EXIT)) {
         if (!(vdev->status & TS_START)) {
@@ -46,11 +45,7 @@ static void* vdev_capture_thread_proc(void *param)
         ticknext  =(ticknext ? ticknext : tickcur) + period;
         ticksleep = (int32_t)ticknext - (int32_t)tickcur;
 
-        hwnddesk  = GetDesktopWindow();
-        hdcsrc    = GetDC(hwnddesk);
-        BitBlt(vdev->hdcdst, 0, 0, vdev->screen_width, vdev->screen_height, hdcsrc, 0, 0, SRCCOPY|CAPTUREBLT);
-        ReleaseDC(hwnddesk, hdcsrc);
-
+        BitBlt(vdev->hdcdst, 0, 0, vdev->screen_width, vdev->screen_height, vdev->hdcsrc, 0, 0, SRCCOPY|CAPTUREBLT);
         curinfo.cbSize = sizeof(CURSORINFO);
         GetCursorInfo(&curinfo);
         GetIconInfo(curinfo.hCursor, &icoinfo);
@@ -74,7 +69,9 @@ void* vdev_init(int frate, int w, int h)
     VDEV *vdev = calloc(1, sizeof(VDEV));
     if (!vdev) return NULL;
 
-    vdev->hdcdst        = CreateCompatibleDC(NULL);
+    vdev->hdcsrc = GetDC(GetDesktopWindow());
+    vdev->hdcdst = CreateCompatibleDC(vdev->hdcsrc);
+
     vdev->screen_width  = GetSystemMetrics(SM_CXSCREEN);
     vdev->screen_height = GetSystemMetrics(SM_CYSCREEN);
     vdev->frame_rate    = frate;
@@ -102,6 +99,7 @@ void vdev_free(void *ctxt)
     vdev->status |= TS_EXIT;
     pthread_join(vdev->thread, NULL);
 
+    ReleaseDC(GetDesktopWindow(), vdev->hdcsrc);
     DeleteDC(vdev->hdcdst);
     DeleteObject(vdev->hbitmap);
     free(vdev);
