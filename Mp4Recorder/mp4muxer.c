@@ -1025,7 +1025,8 @@ void mp4muxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pt
     if (fsize == 0) return;
     if (vpslen + spslen + ppslen) key = 1;
     buf  += vpslen + spslen + ppslen;
-    for (i=0; i<fsize-1 && buf[i]==0; i++); buf += i+1; fsize -= i+1;
+    for (i=0; i<fsize-1 && buf[i]==0; i++);
+    buf  += i+1; fsize -= i+1;
     len   = fsize;
     fsize = htonl(fsize);
 
