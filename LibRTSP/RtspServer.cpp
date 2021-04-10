@@ -8,6 +8,10 @@
 #pragma warning(disable:4996)
 #endif
 
+#if (_MSC_VER >= 1900)
+extern "C" FILE __iob_func[3] = { *stdin, *stdout, *stderr };
+#endif
+
 static void* rtsp_server_thread_proc(void *argv)
 {
     RTSPSERVER *server = (RTSPSERVER*)argv;
