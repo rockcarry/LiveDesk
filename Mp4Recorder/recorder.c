@@ -95,7 +95,7 @@ static void* record_thread_proc(void *argv)
             }
         }
 
-        readsize = codec_read(recorder->aenc, recorder->buffer, AVI_ALAW_FRAME_SIZE, &framesize, &key, &pts, 10);
+        readsize = codec_read(recorder->aenc, recorder->buffer, recorder->rectype == RECTYPE_AVI ? AVI_ALAW_FRAME_SIZE : sizeof(recorder->buffer), &framesize, &key, &pts, 10);
         if ((recorder->status & TS_START) != 0 && readsize > 0 && muxer) { // if recorder started and muxer created and got audio frame
             switch (recorder->rectype) {
             case RECTYPE_AVI: avimuxer_audio(muxer, recorder->buffer, readsize, key, pts); break;
