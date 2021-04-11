@@ -117,8 +117,8 @@ static void* avkcpc_thread_proc(void *argv)
         if ((int32_t)get_tick_count() - (int32_t)tickheartbeat >= 1000) {
             tickheartbeat = get_tick_count();
             ikcp_send(avkcpc->ikcp, "hb", 3);
-            printf("recvncur = %u\n", recvncur); recvncur = 0;
-            printf("recvnavg = %u\n", recvntotal * 1000 / (get_tick_count() - tickstart));
+            printf("recvncur = %llu\n", recvncur); recvncur = 0;
+            printf("recvnavg = %llu\n", recvntotal * 1000 / (get_tick_count() - tickstart));
         }
 
         while (1) {
