@@ -209,28 +209,9 @@ failed:
     return NULL;
 }
 
-static void avimuxer_fix_data(AVI_FILE *avi, int flag)
+static void avimuxer_fix_data(AVI_FILE *avi, int writeidx)
 {
-    uint32_t data, idx1size, movisize, curpos = 4;
-
-    if (flag) {
-        movisize = ftell(avi->fp) - (offsetof(AVI_FILE, type_movi) - offsetof(AVI_FILE, riff));
-        if (movisize & 1) { movisize++; fputc(0, avi->fp); }
-        fwrite("idx1", 4, 1, avi->fp);
-        idx1size = avi->framesize_idx * sizeof(uint32_t) * 4;
-        fwrite(&idx1size , 4, 1, avi->fp);
-        while (avi->framesize_fix < avi->framesize_idx) {
-            fwrite((avi->framesize_lst[avi->framesize_fix] & AVI_VIDEO_FRAME) ? "01dc" : "00wb", 4, 1, avi->fp);
-            data = (avi->framesize_lst[avi->framesize_fix] & AVI_KEY_FRAME  ) ? AVIIF_KEYFRAME : 0;
-            fwrite(&data, 4, 1, avi->fp);
-            data = curpos;
-            fwrite(&data, 4, 1, avi->fp);
-            data = avi->framesize_lst ? avi->framesize_lst[avi->framesize_fix] & 0x3fffffff : 0;
-            fwrite(&data, 4, 1, avi->fp);
-            curpos += data + 8;
-            avi->framesize_fix++;
-        }
-    }
+    uint32_t data, movisize;
 
     data = ftell(avi->fp) - 8;
     fseek(avi->fp, offsetof(AVI_FILE, riff_size) - offsetof(AVI_FILE, riff), SEEK_SET);
@@ -249,12 +230,28 @@ static void avimuxer_fix_data(AVI_FILE *avi, int flag)
     fseek(avi->fp, offsetof(AVI_FILE, strhdr_video.length) - offsetof(AVI_FILE, riff), SEEK_SET);
     fwrite(&data, 4, 1, avi->fp);
 
-    if (flag) {
-        fseek(avi->fp, offsetof(AVI_FILE, mlist_size) - offsetof(AVI_FILE, riff), SEEK_SET);
-        fwrite(&movisize, 4, 1, avi->fp);
-    }
-
+    movisize = ftell(avi->fp) - (offsetof(AVI_FILE, type_movi) - offsetof(AVI_FILE, riff));
+    fseek(avi->fp, offsetof(AVI_FILE, mlist_size) - offsetof(AVI_FILE, riff), SEEK_SET);
+    fwrite(&movisize, 4, 1, avi->fp);
     fseek(avi->fp, 0, SEEK_END);
+
+    if (writeidx) {
+        uint32_t idx1size, curpos = 4;
+        fwrite("idx1", 4, 1, avi->fp);
+        idx1size = avi->framesize_idx * sizeof(uint32_t) * 4;
+        fwrite(&idx1size , 4, 1, avi->fp);
+        while (avi->framesize_fix < avi->framesize_idx) {
+            fwrite((avi->framesize_lst[avi->framesize_fix] & AVI_VIDEO_FRAME) ? "01dc" : "00wb", 4, 1, avi->fp);
+            data = (avi->framesize_lst[avi->framesize_fix] & AVI_KEY_FRAME  ) ? AVIIF_KEYFRAME : 0;
+            fwrite(&data, 4, 1, avi->fp);
+            data = curpos;
+            fwrite(&data, 4, 1, avi->fp);
+            data = avi->framesize_lst ? avi->framesize_lst[avi->framesize_fix] & 0x3fffffff : 0;
+            fwrite(&data, 4, 1, avi->fp);
+            curpos += data + 8;
+            avi->framesize_fix++;
+        }
+    }
 }
 
 void avimuxer_exit(void *ctxt)
@@ -274,11 +271,13 @@ void avimuxer_audio(void *ctxt, unsigned char *buf, int len, int key, unsigned p
 {
     AVI_FILE *avi = (AVI_FILE*)ctxt;
     if (avi && avi->fp) {
-        fwrite("00wb", 4  , 1, avi->fp);
-        fwrite(&len  , 4  , 1, avi->fp);
-        fwrite( buf  , len, 1, avi->fp);
+        int alignlen = (len & 1) ? len + 1 : len;
+        fwrite("00wb"   , 4  , 1, avi->fp);
+        fwrite(&alignlen, 4  , 1, avi->fp);
+        fwrite( buf     , len, 1, avi->fp);
+        if (len & 1) fputc(0, avi->fp);
         if (avi->framesize_lst && avi->framesize_idx < avi->framesize_max) {
-            avi->framesize_lst[avi->framesize_idx++] = len | AVI_AUDIO_FRAME;
+            avi->framesize_lst[avi->framesize_idx++] = alignlen | AVI_AUDIO_FRAME;
         }
         avi->strhdr_audio.length += len;
     }
@@ -288,11 +287,13 @@ void avimuxer_video(void *ctxt, unsigned char *buf, int len, int key, unsigned p
 {
     AVI_FILE *avi = (AVI_FILE*)ctxt;
     if (avi && avi->fp) {
-        fwrite("01dc", 4  , 1, avi->fp);
-        fwrite(&len  , 4  , 1, avi->fp);
-        fwrite( buf  , len, 1, avi->fp);
+        int alignlen = (len & 1) ? len + 1 : len;
+        fwrite("01dc"   , 4  , 1, avi->fp);
+        fwrite(&alignlen, 4  , 1, avi->fp);
+        fwrite( buf     , len, 1, avi->fp);
+        if (len & 1) fputc(0, avi->fp);
         if (avi->framesize_lst && avi->framesize_idx < avi->framesize_max) {
-            avi->framesize_lst[avi->framesize_idx++] = len | AVI_VIDEO_FRAME | (key << 30);
+            avi->framesize_lst[avi->framesize_idx++] = alignlen | AVI_VIDEO_FRAME | (key << 30);
         }
         avi->strhdr_video.length++;
     }
