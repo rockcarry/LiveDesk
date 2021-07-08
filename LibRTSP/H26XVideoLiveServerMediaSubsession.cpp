@@ -101,8 +101,8 @@ char const* H26XVideoLiveServerMediaSubsession::getAuxSDPLine(RTPSink* rtpSink, 
 }
 
 FramedSource* H26XVideoLiveServerMediaSubsession::createNewStreamSource(unsigned /*clientSessionId*/, unsigned& estBitrate) {
-  codec_reset(mServer->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
-  codec_reset(mServer->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+  codec_reset(mServer->aenc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
+  codec_reset(mServer->venc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
   codec_start(mServer->aenc, 1);
   codec_start(mServer->venc, 1);
   adev_start (mServer->adev, 1);
@@ -138,7 +138,7 @@ void H26XVideoLiveServerMediaSubsession::startStream(unsigned clientSessionId, v
 			ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
             void* serverRequestAlternativeByteHandlerClientData) {
   mServer->running_streams++;
-  codec_reset(mServer->venc, CODEC_RESET_REQUEST_IDR);
+  codec_reset(mServer->venc, CODEC_REQUEST_IDR);
   OnDemandServerMediaSubsession::startStream(clientSessionId, streamToken, rtcpRRHandler, rtcpRRHandlerClientData, rtpSeqNum, rtpTimestamp,
     serverRequestAlternativeByteHandler, serverRequestAlternativeByteHandlerClientData);
 }

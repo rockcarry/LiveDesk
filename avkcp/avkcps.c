@@ -181,8 +181,8 @@ static void* avkcps_thread_proc(void *argv)
             if (avkcps->client_connected == 0) {
                 char vpsstr[256] = "", spsstr[256] = "", ppsstr[256] = "";
                 memcpy(&avkcps->client_addr, &fromaddr, sizeof(avkcps->client_addr));
-                codec_reset(avkcps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
-                codec_reset(avkcps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+                codec_reset(avkcps->aenc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
+                codec_reset(avkcps->venc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
                 codec_start(avkcps->aenc, 1);
                 codec_start(avkcps->venc, 1);
                 adev_start (avkcps->adev, 1);

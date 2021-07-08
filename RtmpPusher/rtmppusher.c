@@ -32,8 +32,8 @@ static void rtmppush_start_upstream(RTMPPUSHER *pusher, int start)
     if (start) {
         if ((pusher->status & TS_UPSTREAM_START) == 0) {
             pusher->status |= TS_UPSTREAM_START;
-            codec_reset(pusher->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
-            codec_reset(pusher->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+            codec_reset(pusher->aenc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
+            codec_reset(pusher->venc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
             codec_start(pusher->aenc, 1);
             codec_start(pusher->venc, 1);
             adev_start (pusher->adev, 1);

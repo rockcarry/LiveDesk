@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "avimuxer.h"
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #pragma warning(disable:4996)
 #endif
 
@@ -128,12 +128,12 @@ typedef struct {
 } AVI_FILE;
 #pragma pack()
 
-void* avimuxer_init(char *fname, int duration, int w, int h, int fps, int sampnum, int h265)
+void* avimuxer_init(char *file, int duration, int w, int h, int fps, int sampnum, int h265)
 {
     int samprate = 8000, channels = 1, sampbits = 8;
     AVI_FILE *avi = calloc(1, sizeof(AVI_FILE));
     if (!avi) goto failed;
-    avi->fp = fopen(fname, "wb");
+    avi->fp = fopen(file, "wb");
     if (!avi->fp) goto failed;
 
     memcpy(avi->avih, "avih", 4);
@@ -254,9 +254,9 @@ static void avimuxer_fix_data(AVI_FILE *avi, int writeidx)
     }
 }
 
-void avimuxer_exit(void *ctxt)
+void avimuxer_exit(void *ctx)
 {
-    AVI_FILE *avi = (AVI_FILE*)ctxt;
+    AVI_FILE *avi = (AVI_FILE*)ctx;
     if (avi) {
         if (avi->fp) {
             avimuxer_fix_data(avi, 1);
@@ -267,9 +267,9 @@ void avimuxer_exit(void *ctxt)
     }
 }
 
-void avimuxer_audio(void *ctxt, unsigned char *buf, int len, int key, unsigned pts)
+void avimuxer_audio(void *ctx, unsigned char *buf, int len, int key, unsigned pts)
 {
-    AVI_FILE *avi = (AVI_FILE*)ctxt;
+    AVI_FILE *avi = (AVI_FILE*)ctx;
     if (avi && avi->fp) {
         int alignlen = (len & 1) ? len + 1 : len;
         fwrite("00wb"   , 4  , 1, avi->fp);
@@ -283,9 +283,9 @@ void avimuxer_audio(void *ctxt, unsigned char *buf, int len, int key, unsigned p
     }
 }
 
-void avimuxer_video(void *ctxt, unsigned char *buf, int len, int key, unsigned pts)
+void avimuxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pts)
 {
-    AVI_FILE *avi = (AVI_FILE*)ctxt;
+    AVI_FILE *avi = (AVI_FILE*)ctx;
     if (avi && avi->fp) {
         int alignlen = (len & 1) ? len + 1 : len;
         fwrite("01dc"   , 4  , 1, avi->fp);

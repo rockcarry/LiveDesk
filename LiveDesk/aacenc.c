@@ -37,10 +37,10 @@ typedef struct {
     pthread_t       thread;
 
     faacEncHandle faacenc;
-    uint32_t      insamples;
-    uint32_t      outbufsize;
+    unsigned long insamples;
+    unsigned long outbufsize;
+    unsigned long aaccfgsize;
     uint8_t      *aaccfgptr;
-    uint32_t      aaccfgsize;
 } AACENC;
 
 static void* aenc_encode_thread_proc(void *param)
@@ -163,12 +163,12 @@ static void reset(void *ctxt, int type)
 {
     AACENC *enc = (AACENC*)ctxt;
     if (!ctxt) return;
-    if (type & CODEC_RESET_CLEAR_INBUF) {
+    if (type & CODEC_CLEAR_INBUF) {
         pthread_mutex_lock(&enc->imutex);
         enc->ihead = enc->itail = enc->isize = 0;
         pthread_mutex_unlock(&enc->imutex);
     }
-    if (type & CODEC_RESET_CLEAR_OUTBUF) {
+    if (type & CODEC_CLEAR_OUTBUF) {
         pthread_mutex_lock(&enc->omutex);
         enc->ohead = enc->otail = enc->osize = 0;
         pthread_mutex_unlock(&enc->omutex);

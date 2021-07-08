@@ -228,17 +228,17 @@ static void reset(void *ctxt, int type)
 {
     H265ENC *enc = (H265ENC*)ctxt;
     if (!ctxt) return;
-    if (type & CODEC_RESET_CLEAR_INBUF) {
+    if (type & CODEC_CLEAR_INBUF) {
         pthread_mutex_lock(&enc->imutex);
         enc->ihead = enc->itail = enc->isize = 0;
         pthread_mutex_unlock(&enc->imutex);
     }
-    if (type & CODEC_RESET_CLEAR_OUTBUF) {
+    if (type & CODEC_CLEAR_OUTBUF) {
         pthread_mutex_lock(&enc->omutex);
         enc->ohead = enc->otail = enc->osize = 0;
         pthread_mutex_unlock(&enc->omutex);
     }
-    if (type & CODEC_RESET_REQUEST_IDR) {
+    if (type & CODEC_REQUEST_IDR) {
         enc->status |= TS_REQUEST_IDR;
     }
 }

@@ -7,9 +7,11 @@
 
 #ifdef WIN32
 #include <winsock2.h>
-#pragma warning(disable:4996)
 #else
 #include <netinet/in.h>
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable:4996)
 #endif
 
 static int h26x_parse_nalu_header(uint8_t *data, int len, int *hsize)

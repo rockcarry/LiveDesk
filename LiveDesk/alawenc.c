@@ -122,7 +122,7 @@ static void reset(void *ctxt, int type)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
-    if (type & (CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF)) {
+    if (type & (CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF)) {
         pthread_mutex_lock(&enc->omutex);
         enc->ohead = enc->otail = enc->osize = 0;
         pthread_mutex_unlock(&enc->omutex);

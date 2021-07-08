@@ -106,7 +106,7 @@ static void* record_thread_proc(void *argv)
         if (recorder->starttick && (int32_t)get_tick_count() - (int32_t)recorder->starttick > recorder->duration) {
             recorder->starttick += recorder->duration;
             recorder->status    |= TS_NEXT;
-            codec_reset(recorder->venc, CODEC_RESET_REQUEST_IDR);
+            codec_reset(recorder->venc, CODEC_REQUEST_IDR);
         }
     }
     return NULL;
@@ -157,8 +157,8 @@ void ffrecorder_start(void *ctxt, int start)
     if (!ctxt) return;
     if (start) {
         recorder->status |= TS_START;
-        codec_reset(recorder->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
-        codec_reset(recorder->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+        codec_reset(recorder->aenc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
+        codec_reset(recorder->venc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
         codec_start(recorder->aenc, 1);
         codec_start(recorder->venc, 1);
         adev_start (recorder->adev, 1);

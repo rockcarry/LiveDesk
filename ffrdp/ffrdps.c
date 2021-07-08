@@ -108,8 +108,8 @@ static void* ffrdps_thread_proc(void *argv)
         if (ret > 0) {
             if ((ffrdps->status & TS_CLIENT_CONNECTED) == 0) {
                 char vpsstr[256] = "", spsstr[256] = "", ppsstr[256] = "";
-                codec_reset(ffrdps->aenc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
-                codec_reset(ffrdps->venc, CODEC_RESET_CLEAR_INBUF|CODEC_RESET_CLEAR_OUTBUF|CODEC_RESET_REQUEST_IDR);
+                codec_reset(ffrdps->aenc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
+                codec_reset(ffrdps->venc, CODEC_CLEAR_INBUF|CODEC_CLEAR_OUTBUF|CODEC_REQUEST_IDR);
                 codec_start(ffrdps->aenc, 1);
                 codec_start(ffrdps->venc, 1);
                 adev_start (ffrdps->adev, 1);

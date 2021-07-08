@@ -1,5 +1,6 @@
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
 #include "stdafx.h"
 #include "ringbuf.h"
@@ -55,7 +56,6 @@ typedef struct {
 static void* venc_encode_thread_proc(void *param)
 {
     H264ENC    *enc = (H264ENC*)param;
-    uint8_t    *yuv = NULL;
     x264_nal_t *nals= NULL;
     x264_picture_t pic_in, pic_out;
     int32_t key, len, num, i;
@@ -229,17 +229,17 @@ static void reset(void *ctxt, int type)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     if (!ctxt) return;
-    if (type & CODEC_RESET_CLEAR_INBUF) {
+    if (type & CODEC_CLEAR_INBUF) {
         pthread_mutex_lock(&enc->imutex);
         enc->ihead = enc->itail = enc->isize = 0;
         pthread_mutex_unlock(&enc->imutex);
     }
-    if (type & CODEC_RESET_CLEAR_OUTBUF) {
+    if (type & CODEC_CLEAR_OUTBUF) {
         pthread_mutex_lock(&enc->omutex);
         enc->ohead = enc->otail = enc->osize = 0;
         pthread_mutex_unlock(&enc->omutex);
     }
-    if (type & CODEC_RESET_REQUEST_IDR) {
+    if (type & CODEC_REQUEST_IDR) {
         enc->status |= TS_REQUEST_IDR;
     }
 }
@@ -266,7 +266,7 @@ static void obufunlock(void *ctxt, int head, int tail, int size)
     pthread_mutex_unlock(&enc->omutex);
 }
 
-static void reconfig(CODEC *codec, int bitrate)
+static void reconfig(void *codec, int bitrate)
 {
     H264ENC *enc = (H264ENC*)codec;
     int      ret;

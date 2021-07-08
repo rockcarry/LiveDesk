@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include "log.h"
 
+#ifdef _MSC_VER
 #pragma warning(disable:4996)
+#endif
 
 // 内部常量定义
 #define LOG_MODE_DISABLE  0
@@ -60,7 +62,11 @@ void log_printf(char *format, ...)
         break;
 
     case LOG_MODE_DEBUGER:
+#ifdef WIN32
         OutputDebugStringA(buf);
+#else
+        printf("%s", buf); fflush(stdout);
+#endif
         break;
     }
 }
