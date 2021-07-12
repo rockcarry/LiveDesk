@@ -24,11 +24,11 @@ typedef struct {
     int      status;
 
     pthread_mutex_t omutex;
-    pthread_cond_t  ocond;
+    pthread_cond_t  ocond ;
     pthread_t       thread;
 } ALAWENC;
 
-static void uninit(void *ctxt)
+static void alawenc_uninit(void *ctxt)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
@@ -48,7 +48,7 @@ static uint8_t pcm2alaw(int16_t pcm)
     return (alaw ^ 0xd5);
 }
 
-static void write(void *ctxt, void *buf[8], int len[8])
+static void alawenc_write(void *ctxt, void *buf[8], int len[8])
 {
     uint32_t timestamp, typelen, i;
     ALAWENC *enc = (ALAWENC*)ctxt;
@@ -72,7 +72,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->omutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
+static int alawenc_read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     uint32_t timestamp = 0;
@@ -104,7 +104,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *
     return readsize;
 }
 
-static void start(void *ctxt, int start)
+static void alawenc_start(void *ctxt, int start)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
@@ -118,7 +118,7 @@ static void start(void *ctxt, int start)
     }
 }
 
-static void reset(void *ctxt, int type)
+static void alawenc_reset(void *ctxt, int type)
 {
     ALAWENC *enc = (ALAWENC*)ctxt;
     if (!ctxt) return;
@@ -135,11 +135,11 @@ CODEC* alawenc_init(void)
     if (!enc) return NULL;
 
     strncpy(enc->name, "alawenc", sizeof(enc->name));
-    enc->uninit     = uninit;
-    enc->write      = write;
-    enc->read       = read;
-    enc->start      = start;
-    enc->reset      = reset;
+    enc->uninit = alawenc_uninit;
+    enc->write  = alawenc_write;
+    enc->read   = alawenc_read;
+    enc->start  = alawenc_start;
+    enc->reset  = alawenc_reset;
 
     // init mutex & cond
     pthread_mutex_init(&enc->omutex, NULL);

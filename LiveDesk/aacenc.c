@@ -84,7 +84,7 @@ static void* aenc_encode_thread_proc(void *param)
     return NULL;
 }
 
-static void uninit(void *ctxt)
+static void aacenc_uninit(void *ctxt)
 {
     AACENC *enc = (AACENC*)ctxt;
     if (!ctxt) return;
@@ -103,7 +103,7 @@ static void uninit(void *ctxt)
     free(enc);
 }
 
-static void write(void *ctxt, void *buf[8], int len[8])
+static void aacenc_write(void *ctxt, void *buf[8], int len[8])
 {
     int nwrite;
     AACENC *enc = (AACENC*)ctxt;
@@ -118,7 +118,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
+static int aacenc_read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     AACENC *enc = (AACENC*)ctxt;
     uint32_t timestamp = 0;
@@ -150,7 +150,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *
     return readsize;
 }
 
-static void start(void *ctxt, int start)
+static void aacenc_start(void *ctxt, int start)
 {
     AACENC *enc = (AACENC*)ctxt;
     if (!ctxt) return;
@@ -164,7 +164,7 @@ static void start(void *ctxt, int start)
     }
 }
 
-static void reset(void *ctxt, int type)
+static void aacenc_reset(void *ctxt, int type)
 {
     AACENC *enc = (AACENC*)ctxt;
     if (!ctxt) return;
@@ -187,11 +187,11 @@ CODEC* aacenc_init(int channels, int samplerate, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "aacenc", sizeof(enc->name));
-    enc->uninit     = uninit;
-    enc->write      = write;
-    enc->read       = read;
-    enc->start      = start;
-    enc->reset      = reset;
+    enc->uninit = aacenc_uninit;
+    enc->write  = aacenc_write;
+    enc->read   = aacenc_read;
+    enc->start  = aacenc_start;
+    enc->reset  = aacenc_reset;
 
     // init mutex & cond
     pthread_mutex_init(&enc->imutex, NULL);

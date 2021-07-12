@@ -83,8 +83,10 @@ static void* record_thread_proc(void *argv)
                     muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->aacinfo, ish265);
                     break;
                 }
-                recorder->starttick = get_tick_count();
-                recorder->starttick = recorder->starttick ? recorder->starttick : 1;
+                if (recorder->starttick == 0) {
+                    recorder->starttick = get_tick_count();
+                    recorder->starttick = recorder->starttick ? recorder->starttick : 1;
+                }
             }
 
             if (muxer) { // if muxer created

@@ -119,7 +119,7 @@ static void* venc_encode_thread_proc(void *param)
     return NULL;
 }
 
-static void uninit(void *ctxt)
+static void h265enc_uninit(void *ctxt)
 {
     H265ENC *enc = (H265ENC*)ctxt;
     if (!ctxt) return;
@@ -140,7 +140,7 @@ static void uninit(void *ctxt)
     free(enc);
 }
 
-static void write(void *ctxt, void *buf[8], int len[8])
+static void h265enc_write(void *ctxt, void *buf[8], int len[8])
 {
     H265ENC *enc = (H265ENC*)ctxt;
     if (!ctxt) return;
@@ -177,7 +177,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
+static int h265enc_read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     H265ENC *enc = (H265ENC*)ctxt;
     uint32_t timestamp = 0;
@@ -209,7 +209,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *
     return readsize;
 }
 
-static void start(void *ctxt, int start)
+static void h265enc_start(void *ctxt, int start)
 {
     H265ENC *enc = (H265ENC*)ctxt;
     if (!ctxt) return;
@@ -224,7 +224,7 @@ static void start(void *ctxt, int start)
     }
 }
 
-static void reset(void *ctxt, int type)
+static void h265enc_reset(void *ctxt, int type)
 {
     H265ENC *enc = (H265ENC*)ctxt;
     if (!ctxt) return;
@@ -243,7 +243,7 @@ static void reset(void *ctxt, int type)
     }
 }
 
-static void reconfig(CODEC *codec, int bitrate)
+static void h265enc_reconfig(CODEC *codec, int bitrate)
 {
     H265ENC *enc = (H265ENC*)codec;
     int      ret;
@@ -262,12 +262,12 @@ CODEC* h265enc_init(int frate, int w, int h, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "h265enc", sizeof(enc->name));
-    enc->uninit     = uninit;
-    enc->write      = write;
-    enc->read       = read;
-    enc->start      = start;
-    enc->reset      = reset;
-    enc->reconfig   = reconfig;
+    enc->uninit   = h265enc_uninit;
+    enc->write    = h265enc_write;
+    enc->read     = h265enc_read;
+    enc->start    = h265enc_start;
+    enc->reset    = h265enc_reset;
+    enc->reconfig = h265enc_reconfig;
 
     // init mutex & cond
     pthread_mutex_init(&enc->imutex, NULL);

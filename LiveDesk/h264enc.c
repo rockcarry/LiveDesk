@@ -120,7 +120,7 @@ static void* venc_encode_thread_proc(void *param)
     return NULL;
 }
 
-static void uninit(void *ctxt)
+static void h264enc_uninit(void *ctxt)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     if (!ctxt) return;
@@ -141,7 +141,7 @@ static void uninit(void *ctxt)
     free(enc);
 }
 
-static void write(void *ctxt, void *buf[8], int len[8])
+static void h264enc_write(void *ctxt, void *buf[8], int len[8])
 {
     H264ENC *enc = (H264ENC*)ctxt;
     if (!ctxt) return;
@@ -178,7 +178,7 @@ static void write(void *ctxt, void *buf[8], int len[8])
     pthread_mutex_unlock(&enc->imutex);
 }
 
-static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
+static int h264enc_read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *pts, int timeout)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     uint32_t timestamp = 0;
@@ -210,7 +210,7 @@ static int read(void *ctxt, void *buf, int len, int *fsize, int *key, uint32_t *
     return readsize;
 }
 
-static void start(void *ctxt, int start)
+static void h264enc_start(void *ctxt, int start)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     if (!ctxt) return;
@@ -225,7 +225,7 @@ static void start(void *ctxt, int start)
     }
 }
 
-static void reset(void *ctxt, int type)
+static void h264enc_reset(void *ctxt, int type)
 {
     H264ENC *enc = (H264ENC*)ctxt;
     if (!ctxt) return;
@@ -244,7 +244,7 @@ static void reset(void *ctxt, int type)
     }
 }
 
-static void reconfig(void *codec, int bitrate)
+static void h264enc_reconfig(void *codec, int bitrate)
 {
     H264ENC *enc = (H264ENC*)codec;
     int      ret;
@@ -264,12 +264,12 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     if (!enc) return NULL;
 
     strncpy(enc->name, "h264enc", sizeof(enc->name));
-    enc->uninit     = uninit;
-    enc->write      = write;
-    enc->read       = read;
-    enc->start      = start;
-    enc->reset      = reset;
-    enc->reconfig   = reconfig;
+    enc->uninit   = h264enc_uninit;
+    enc->write    = h264enc_write;
+    enc->read     = h264enc_read;
+    enc->start    = h264enc_start;
+    enc->reset    = h264enc_reset;
+    enc->reconfig = h264enc_reconfig;
 
     // init mutex & cond
     pthread_mutex_init(&enc->imutex, NULL);
@@ -310,8 +310,8 @@ CODEC* h264enc_init(int frate, int w, int h, int bitrate)
     enc->param.rc.i_vbv_buffer_size = 2 * bitrate / 1000;
 #endif
 
-    enc->ow   = w;
-    enc->oh   = h;
+    enc->ow = w;
+    enc->oh = h;
     enc->x264 = x264_encoder_open(&enc->param);
     for (i=0; i<YUV_BUF_NUM; i++) {
         enc->ibuff[i] = (uint8_t*)enc + sizeof(H264ENC) + i * (w * h * 3 / 2);
