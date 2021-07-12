@@ -243,28 +243,6 @@ static void reset(void *ctxt, int type)
     }
 }
 
-static void obuflock(void *ctxt, uint8_t **pbuf, int *max, int *head, int *tail, int *size)
-{
-    H265ENC *enc = (H265ENC*)ctxt;
-    if (!ctxt) return;
-    pthread_mutex_lock(&enc->omutex);
-    *pbuf = enc->obuff;
-    *max  = sizeof(enc->obuff);
-    *head = enc->ohead;
-    *tail = enc->otail;
-    *size = enc->osize;
-}
-
-static void obufunlock(void *ctxt, int head, int tail, int size)
-{
-    H265ENC *enc = (H265ENC*)ctxt;
-    if (!ctxt) return;
-    enc->ohead = head;
-    enc->otail = tail;
-    enc->osize = size;
-    pthread_mutex_unlock(&enc->omutex);
-}
-
 static void reconfig(CODEC *codec, int bitrate)
 {
     H265ENC *enc = (H265ENC*)codec;
@@ -289,8 +267,6 @@ CODEC* h265enc_init(int frate, int w, int h, int bitrate)
     enc->read       = read;
     enc->start      = start;
     enc->reset      = reset;
-    enc->obuflock   = obuflock;
-    enc->obufunlock = obufunlock;
     enc->reconfig   = reconfig;
 
     // init mutex & cond

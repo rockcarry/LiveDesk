@@ -129,28 +129,6 @@ static void reset(void *ctxt, int type)
     }
 }
 
-static void obuflock(void *ctxt, uint8_t **pbuf, int *max, int *head, int *tail, int *size)
-{
-    ALAWENC *enc = (ALAWENC*)ctxt;
-    if (!ctxt) return;
-    pthread_mutex_lock(&enc->omutex);
-    *pbuf = enc->obuff;
-    *max  = sizeof(enc->obuff);
-    *head = enc->ohead;
-    *tail = enc->otail;
-    *size = enc->osize;
-}
-
-static void obufunlock(void *ctxt, int head, int tail, int size)
-{
-    ALAWENC *enc = (ALAWENC*)ctxt;
-    if (!ctxt) return;
-    enc->ohead = head;
-    enc->otail = tail;
-    enc->osize = size;
-    pthread_mutex_unlock(&enc->omutex);
-}
-
 CODEC* alawenc_init(void)
 {
     ALAWENC *enc = calloc(1, sizeof(ALAWENC));
@@ -162,8 +140,6 @@ CODEC* alawenc_init(void)
     enc->read       = read;
     enc->start      = start;
     enc->reset      = reset;
-    enc->obuflock   = obuflock;
-    enc->obufunlock = obufunlock;
 
     // init mutex & cond
     pthread_mutex_init(&enc->omutex, NULL);
