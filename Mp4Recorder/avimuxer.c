@@ -128,7 +128,7 @@ typedef struct {
 } AVI_FILE;
 #pragma pack()
 
-void* avimuxer_init(char *file, int duration, int w, int h, int fps, int sampnum, int h265)
+void* avimuxer_init(char *file, int duration, int w, int h, int frate, int gop, int h265, int sampnum)
 {
     int samprate = 8000, channels = 1, sampbits = 8;
     AVI_FILE *avi = calloc(1, sizeof(AVI_FILE));
@@ -136,9 +136,10 @@ void* avimuxer_init(char *file, int duration, int w, int h, int fps, int sampnum
     avi->fp = fopen(file, "wb");
     if (!avi->fp) goto failed;
 
+    if (sampnum == 0) sampnum = 120; // default 120 samples per frame
     memcpy(avi->avih, "avih", 4);
     avi->avih_size                      = sizeof(AVI_HEADER);
-    avi->avi_header.microsec_per_frame  = 1000000 / fps;
+    avi->avi_header.microsec_per_frame  = 1000000 / frate;
     avi->avi_header.maxbytes_per_Sec    = w * h * 3;
     avi->avi_header.flags               = AVIF_ISINTERLEAVED|AVIF_HASINDEX;
     avi->avi_header.number_streams      = 2;
@@ -173,7 +174,7 @@ void* avimuxer_init(char *file, int duration, int w, int h, int fps, int sampnum
     memcpy(avi->strhdr_video.fcc_codec, h265 ? "HEV1" : "H264", 4);
     avi->strhdr2_size                   = sizeof(STREAM_HEADER);
     avi->strhdr_video.scale             = 1;
-    avi->strhdr_video.rate              = fps;
+    avi->strhdr_video.rate              = frate;
     avi->strhdr_video.suggested_bufsize = w * h * 3;
 
     memcpy(avi->strfmt2, "strf", 4);
@@ -199,7 +200,7 @@ void* avimuxer_init(char *file, int duration, int w, int h, int fps, int sampnum
     avi->hlist_size = 4 + 8 + avi->avih_size + 8 + avi->slist1_size + 8 + avi->slist2_size;
 
     if (duration == 0) duration = 10 * 60 * 1000; // default duration is 10min
-    avi->framesize_max = duration * fps / 1000 + fps / 2 + duration * samprate / 1000 / sampnum + samprate / sampnum / 2;
+    avi->framesize_max = duration * frate / 1000 + frate / 2 + duration * samprate / 1000 / sampnum + samprate / sampnum / 2;
     avi->framesize_lst = malloc(avi->framesize_max * sizeof(uint32_t));
     fwrite(&avi->riff, sizeof(AVI_FILE) - offsetof(AVI_FILE, riff), 1, avi->fp);
     return avi;
@@ -286,7 +287,8 @@ void avimuxer_audio(void *ctx, unsigned char *buf, int len, int key, unsigned pt
 void avimuxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pts)
 {
     AVI_FILE *avi = (AVI_FILE*)ctx;
-    if (avi && avi->fp) {
+    if (avi == NULL) return;
+    if (avi->fp) {
         int alignlen = (len & 1) ? len + 1 : len;
         fwrite("01dc"   , 4  , 1, avi->fp);
         fwrite(&alignlen, 4  , 1, avi->fp);
