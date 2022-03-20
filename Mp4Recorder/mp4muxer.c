@@ -508,11 +508,11 @@ static void mp4muxer_write_avc1_box(MP4FILE *mp4, uint8_t *spsbuf, int spslen, u
     avccbox.avcc_size          = sizeof(AVCCBOX) + spslen + spslen;
     avccbox.avcc_type          = MP4_FOURCC('a', 'v', 'c', 'C');
     avccbox.avcc_config_ver    = 1;
-    avccbox.avcc_avc_profile   = spslen > 5 ? spsbuf[4 + 1] : 0;
-    avccbox.avcc_profile_compat= spslen > 6 ? spsbuf[4 + 2] : 0;
-    avccbox.avcc_avc_level     = spslen > 7 ? spsbuf[4 + 3] : 0;
-    avccbox.avcc_nalulen       = 0xFF;
-    avccbox.avcc_sps_num       = (0x7 << 5) | (1 << 0);
+    avccbox.avcc_avc_profile   = spslen > 1 ? spsbuf[1] : 0;
+    avccbox.avcc_profile_compat= spslen > 2 ? spsbuf[2] : 0;
+    avccbox.avcc_avc_level     = spslen > 3 ? spsbuf[3] : 0;
+    avccbox.avcc_nalulen       = 3;
+    avccbox.avcc_sps_num       = 1;
     avccbox.avcc_sps_len       = (uint16_t)(htonl(spslen) >> 16);
     avccbox.avcc_pps_num       = 1;
     avccbox.avcc_pps_len       = (uint16_t)(htonl(ppslen) >> 16);
@@ -533,8 +533,7 @@ static void mp4muxer_write_avc1_box(MP4FILE *mp4, uint8_t *spsbuf, int spslen, u
 
     fseek(mp4->fp, offsetof(MP4FILE, stsd_avc1_hev1_size), SEEK_SET);
     fwrite(&avc1box, sizeof(avc1box), 1, mp4->fp);
-    fwrite(&avccbox, offsetof(AVCCBOX, avcc_sps_num), 1, mp4->fp);
-    fwrite(&avccbox.avcc_sps_num, sizeof(avccbox.avcc_sps_num) + sizeof(avccbox.avcc_sps_len), 1, mp4->fp);
+    fwrite(&avccbox, offsetof(AVCCBOX, avcc_pps_num), 1, mp4->fp);
     fwrite(spsbuf, spslen, 1, mp4->fp);
     fwrite(&avccbox.avcc_pps_num, sizeof(avccbox.avcc_pps_num) + sizeof(avccbox.avcc_pps_len), 1, mp4->fp);
     fwrite(ppsbuf, ppslen, 1, mp4->fp);
