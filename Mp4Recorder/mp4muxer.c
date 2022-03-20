@@ -984,7 +984,7 @@ void mp4muxer_video(void *ctx, unsigned char *buf, int len, int key, unsigned pt
                 }
             }
         }
-        if ((mp4->flags & FLAG_VIDEO_H265_ENCODE) && nalu_type >= 0 && nalu_type <= 21 || !(mp4->flags & FLAG_VIDEO_H265_ENCODE) && nalu_type >= 1 && nalu_type <= 5) {
+        if (((mp4->flags & FLAG_VIDEO_H265_ENCODE) && nalu_type >= 0 && nalu_type <= 21) || (!(mp4->flags & FLAG_VIDEO_H265_ENCODE) && nalu_type >= 1 && nalu_type <= 5)) {
             u32tempvalue = htonl(nalu_len);
             framesize   += sizeof(uint32_t) + nalu_len;
             fwrite(&u32tempvalue, 1, sizeof(u32tempvalue), mp4->fp);
