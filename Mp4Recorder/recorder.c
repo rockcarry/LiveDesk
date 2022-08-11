@@ -76,11 +76,11 @@ static void* record_thread_proc(void *argv)
                 switch (recorder->rectype) {
                 case RECTYPE_AVI:
                     snprintf(filepath, sizeof(filepath), "%s-%03d.avi", recorder->filename, ++recorder->recfilecnt);
-                    muxer = avimuxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, ish265, AVI_ALAW_FRAME_SIZE);
+                    muxer = avimuxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 1, ish265, AVI_ALAW_FRAME_SIZE);
                     break;
                 case RECTYPE_MP4:
                     snprintf(filepath, sizeof(filepath), "%s-%03d.mp4", recorder->filename, ++recorder->recfilecnt);
-                    muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 2, ish265, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->aacinfo);
+                    muxer = mp4muxer_init(filepath, recorder->duration, recorder->width, recorder->height, recorder->fps, recorder->fps * 1, ish265, recorder->channels, recorder->samprate, 16, 1024, recorder->aenc->aacinfo);
                     break;
                 }
                 if (recorder->starttick == 0) {
