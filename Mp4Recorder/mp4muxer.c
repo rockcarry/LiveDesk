@@ -550,7 +550,7 @@ static void write_fixed_trackv_data(MP4FILE *mp4)
         fseek(mp4->fp, mp4->sttsv_off + 12, SEEK_SET);
         fwrite(&mp4->sttsv_count, sizeof(uint32_t), 1, mp4->fp);
         fseek(mp4->fp, mp4->sttsv_cur * sizeof(uint32_t) * 2, SEEK_CUR);
-        fwrite(&mp4->sttsv_buf[mp4->sttsv_cur], (ntohl(mp4->sttsv_count) - mp4->sttsv_cur) * sizeof(uint32_t) * 2, 1, mp4->fp);
+        fwrite(&mp4->sttsv_buf[mp4->sttsv_cur * 2], (ntohl(mp4->sttsv_count) - mp4->sttsv_cur) * sizeof(uint32_t) * 2, 1, mp4->fp);
         mp4->sttsv_cur = ntohl(mp4->sttsv_count);
     }
 #endif
@@ -593,7 +593,7 @@ static void write_fixed_tracka_data(MP4FILE *mp4)
         fseek(mp4->fp, mp4->sttsa_off + 12, SEEK_SET);
         fwrite(&mp4->sttsa_count, sizeof(uint32_t), 1, mp4->fp);
         fseek(mp4->fp, mp4->sttsa_cur * sizeof(uint32_t) * 2, SEEK_CUR);
-        fwrite(&mp4->sttsa_buf[mp4->sttsa_cur], (ntohl(mp4->sttsa_count) - mp4->sttsa_cur) * sizeof(uint32_t) * 2, 1, mp4->fp);
+        fwrite(&mp4->sttsa_buf[mp4->sttsa_cur * 2], (ntohl(mp4->sttsa_count) - mp4->sttsa_cur) * sizeof(uint32_t) * 2, 1, mp4->fp);
         mp4->sttsa_cur = ntohl(mp4->sttsa_count);
     }
 #endif
