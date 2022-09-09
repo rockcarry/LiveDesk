@@ -38,10 +38,10 @@ typedef struct {
     int      otail;
     int      osize;
 
-    #define TS_EXIT             (1 << 0)
-    #define TS_START            (1 << 1)
-    #define TS_REQUEST_IDR      (1 << 2)
-    #define TS_KEYFRAME_DROPPED (1 << 3)
+    #define TS_EXIT           (1 << 0)
+    #define TS_START          (1 << 1)
+    #define TS_REQUEST_IDR    (1 << 2)
+    #define TS_VFRAME_DROPPED (1 << 3)
     int      status;
 
     pthread_mutex_t imutex;
@@ -95,8 +95,8 @@ static void* venc_encode_thread_proc(void *param)
 
         pthread_mutex_lock(&enc->omutex);
         key = (nals[0].i_type == NAL_SPS);
-        if ((enc->status & TS_KEYFRAME_DROPPED) && !key) {
-            log_printf("h264enc last key frame has dropped, and current frame is non-key frame, so drop it !\n");
+        if ((enc->status & TS_VFRAME_DROPPED) && !key) {
+            log_printf("h264enc video frame has dropped, and current frame is non-key frame, so drop it !\n");
         } else {
             if (sizeof(uint32_t) + sizeof(uint32_t) + len <= sizeof(enc->obuff) - enc->osize) {
                 uint32_t timestamp = get_tick_count();
@@ -109,10 +109,10 @@ static void* venc_encode_thread_proc(void *param)
                 }
                 enc->osize += len;
                 pthread_cond_signal(&enc->ocond);
-                if (key) enc->status &= ~TS_KEYFRAME_DROPPED;
+                enc->status &= ~TS_VFRAME_DROPPED;
             } else {
                 log_printf("h264enc %s frame dropped !\n", key ? "key" : "non-key");
-                if (key) enc->status |=  TS_KEYFRAME_DROPPED;
+                enc->status |=  TS_VFRAME_DROPPED;
             }
         }
         pthread_mutex_unlock(&enc->omutex);

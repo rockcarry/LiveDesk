@@ -28,7 +28,7 @@ typedef struct {
     #define TS_EXIT             (1 << 0)
     #define TS_START            (1 << 1)
     #define TS_CLIENT_CONNECTED (1 << 2)
-    #define TS_KEYFRAME_DROPPED (1 << 3)
+    #define TS_VFRAME_DROPPED   (1 << 3)
     #define TS_ADAPTIVE_BITRATE (1 << 4)
     uint32_t  status;
     pthread_t pthread;
@@ -159,12 +159,12 @@ static void* ffrdps_thread_proc(void *argv)
             }
             readsize = codec_read(ffrdps->venc, ffrdps->buff + 2 * sizeof(int32_t), sizeof(ffrdps->buff) - 2 * sizeof(int32_t), &framesize, &keyframe, &pts, 0);
             if (readsize > 0 && readsize == framesize && readsize <= 0xFFFFFF) {
-                if ((ffrdps->status & TS_KEYFRAME_DROPPED) && !keyframe) {
-                    printf("ffrdp key frame has dropped, and current frame is non-key frame, so drop it !\n");
+                if ((ffrdps->status & TS_VFRAME_DROPPED) && !keyframe) {
+                    printf("ffrdp video frame has dropped, and current frame is non-key frame, so drop it !\n");
                 } else {
                     ret = ffrdp_send_packet(ffrdps, 'V', ffrdps->buff, framesize, pts);
-                    if (ret == 0 && keyframe) ffrdps->status &=~TS_KEYFRAME_DROPPED;
-                    if (ret != 0 && keyframe) ffrdps->status |= TS_KEYFRAME_DROPPED;
+                    if (ret == 0) ffrdps->status &=~TS_VFRAME_DROPPED;
+                    else          ffrdps->status |= TS_VFRAME_DROPPED;
                 }
             }
         }
